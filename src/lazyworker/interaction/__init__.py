@@ -1,4 +1,5 @@
 from lazyworker.interaction.batch import Batch, BatchReport, BatchRunner, Operation, run_operation
+from lazyworker.interaction.detect import DetectedElement, DetectorUnavailable, detect
 from lazyworker.interaction.interactor import Interactor, build_interactor, open_session
 from lazyworker.interaction.locator import Locator, LocatorResolver, Resolution
 from lazyworker.interaction.models import (
@@ -30,6 +31,8 @@ __all__ = [
     "Batch",
     "BatchReport",
     "BatchRunner",
+    "DetectedElement",
+    "DetectorUnavailable",
     "ErrorCode",
     "Interactor",
     "Locator",
@@ -49,9 +52,10 @@ __all__ = [
     "build_interactor",
     "clear_session_state",
     "describe_screen",
+    "detect",
     "exit_code_for",
-    "recognize",
     "load_session_state",
+    "recognize",
     "open_session",
     "run_operation",
     "save_session_state",

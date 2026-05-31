@@ -106,6 +106,12 @@ A component outside the tree can then be acted on by coordinate: OCR gives the b
 `lazyworker ui tap --at <cx>,<cy>` taps its center (a real touch hits the view via hit-testing,
 regardless of accessibility).
 
+Add `--detect` to also run a local visual UI detector — OmniParser (YOLO icon detection +
+Florence-2 captioning), `pip install 'lazyworker[detect]'`, on-device. It finds icons/buttons/
+regions from pixels (even ones absent from the tree) as `{label, box, size, confidence, container}`,
+where `container` is the smallest tree element whose frame contains the detection. The detector is
+heavy (downloads model weights, loads PyTorch); use it for exploration, not per-action.
+
 **Aggregate operations** — pipe an ordered JSON array of ops (stop-on-error by default):
 
 ```bash

@@ -209,6 +209,29 @@ def test_ui_screen_with_ocr(
     assert data["ocr"][0]["confidence"] == 0.99
 
 
+def test_ui_screen_with_detect(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path, httpx_mock: HTTPXMock
+) -> None:
+    from lazyworker.interaction.detect import DetectedElement
+
+    _use_state_dir(monkeypatch, tmp_path)
+    _seed_session(tmp_path)
+    monkeypatch.setattr(
+        "lazyworker.cli.detect",
+        lambda *a, **k: [
+            DetectedElement(label="back arrow", box=(1, 2, 3, 4), size=(3, 4), confidence=0.9)
+        ],
+    )
+    png = base64.b64encode(b"\x89PNG\r\n").decode()
+    httpx_mock.add_response(url=f"{BASE}/screenshot", json={"value": png})
+    httpx_mock.add_response(url=f"{BASE}/source?format=json", json=_tree([BUTTON]))
+    out = tmp_path / "screen.png"
+    result = runner.invoke(app, ["ui", "screen", "--detect", "-o", str(out)])
+    assert result.exit_code == 0
+    data = json.loads(result.stdout)
+    assert data["detections"][0]["label"] == "back arrow"
+
+
 def test_ui_batch_stop_on_error_exit_code(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path, httpx_mock: HTTPXMock
 ) -> None:

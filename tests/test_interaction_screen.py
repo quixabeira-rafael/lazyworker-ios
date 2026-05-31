@@ -1,3 +1,4 @@
+from lazyworker.interaction.detect import DetectedElement
 from lazyworker.interaction.screen import describe_screen
 from lazyworker.wda.models import AccessibilityNode
 
@@ -80,6 +81,14 @@ def test_reading_order_top_to_bottom() -> None:
     description = describe_screen(_tree(), screenshot="/x.png")
     tops = [e.box[1] for e in description.elements]
     assert tops == sorted(tops)
+
+
+def test_detection_container_assignment() -> None:
+    detection = DetectedElement(label="icon", box=(200, 140, 20, 20), size=(20, 20), confidence=0.9)
+    description = describe_screen(_tree(), screenshot="/x.png", detections=[detection])
+    assert description.detections is not None
+    # center (210, 150) is inside the card frame [16,120,370,96]
+    assert description.detections[0].container == "card-1"
 
 
 def test_button_is_interactive_with_text() -> None:

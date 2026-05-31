@@ -189,6 +189,19 @@ Exploração  ──►  Robots (RobotPattern)  ──►  Assertion
       árvore** via OCR→centro→`tap --at` → dispara a ação (event-log `tap:ocr-hidden`).
 - [x] e2e: recuperação de texto fora da árvore + tap-por-OCR. 126 unit + 15 e2e, ruff + mypy.
 
+## `ui screen --detect` (OmniParser, detector visual local) — CONCLUÍDO
+- [x] `interaction/detect.py`: `detect()` roda **OmniParser** (YOLO `icon_detect` + caption
+      Florence-2) via engine injetável; converte boxes pixel→pontos (normalizado). `DetectedElement`
+      = label + box + size + **confidence** + `container` (menor elemento da árvore que o contém).
+      Backend opcional `[detect]` (ultralytics + transformers==4.49 + timm/einops). DETECTOR_UNAVAILABLE.
+- [x] `--detect` no `ui screen` (parametrizado como `--ocr`, local-only). `_assign_containers`
+      (contenção geométrica) no `describe_screen`.
+- [x] Validado ao vivo: detectou back/card/ícones da status bar (estes nem na árvore do app), com
+      container correto (`card-1`, `BackButton`). Captions de ícones minúsculos são ruidosos (dica).
+- [x] Unit (engine falso, sem torch) + CLI test. 132 unit, ruff + mypy strict. (e2e do detector
+      fica de fora da suíte automatica por ser pesado — validado ao vivo.)
+- Setup validado: transformers 5.x quebra Florence-2 → pin 4.49; processor vem do Florence-2-base-ft.
+
 ## Próximos passos
 - [ ] (Opcional) Validar o caminho USB+iproxy ao vivo.
 - [ ] (Opcional) Validar o lab + e2e em device físico.

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from pydantic import BaseModel
 
+from lazyworker.interaction.detect import DetectedElement
 from lazyworker.interaction.ocr import OcrText
 from lazyworker.wda.models import AccessibilityNode
 
@@ -49,6 +50,7 @@ class ScreenDescription(BaseModel):
     bundle_id: str | None = None
     elements: list[ScreenElement]
     ocr: list[OcrText] | None = None
+    detections: list[DetectedElement] | None = None
 
 
 def _text_of(node: AccessibilityNode) -> str | None:
@@ -58,12 +60,34 @@ def _text_of(node: AccessibilityNode) -> str | None:
     return None
 
 
+def _assign_containers(
+    detections: list[DetectedElement], elements: list[ScreenElement]
+) -> list[DetectedElement]:
+    """Tag each detection with the smallest tree element whose box contains its center."""
+    assigned: list[DetectedElement] = []
+    for detection in detections:
+        cx = detection.box[0] + detection.box[2] // 2
+        cy = detection.box[1] + detection.box[3] // 2
+        best: str | None = None
+        best_area: int | None = None
+        for element in elements:
+            ex, ey, ew, eh = element.box
+            if ex <= cx <= ex + ew and ey <= cy <= ey + eh:
+                area = ew * eh
+                if best_area is None or area < best_area:
+                    best = element.identifier or element.role
+                    best_area = area
+        assigned.append(detection.model_copy(update={"container": best}))
+    return assigned
+
+
 def describe_screen(
     tree: AccessibilityNode,
     *,
     screenshot: str,
     bundle_id: str | None = None,
     ocr: list[OcrText] | None = None,
+    detections: list[DetectedElement] | None = None,
 ) -> ScreenDescription:
     """Flatten the accessibility tree into screen boxes, in reading order."""
     width = tree.rect.width if tree.rect else 0
@@ -99,6 +123,8 @@ def describe_screen(
 
     visit(tree, None)
     elements.sort(key=lambda element: (element.box[1], element.box[0]))
+    if detections:
+        detections = _assign_containers(detections, elements)
     return ScreenDescription(
         screenshot=screenshot,
         width=width,
@@ -106,4 +132,5 @@ def describe_screen(
         bundle_id=bundle_id,
         elements=elements,
         ocr=ocr,
+        detections=detections,
     )

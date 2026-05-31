@@ -21,6 +21,7 @@ from lazyworker.devices.runner import CommandError
 from lazyworker.doctor.checks import build_default_context, build_report
 from lazyworker.doctor.render import format_report
 from lazyworker.interaction.batch import Batch, BatchReport, BatchRunner
+from lazyworker.interaction.detect import DetectorUnavailable, detect
 from lazyworker.interaction.interactor import Interactor, build_interactor, open_session
 from lazyworker.interaction.locator import Locator
 from lazyworker.interaction.models import (
@@ -547,6 +548,9 @@ def ui_screenshot(
 def ui_screen(
     output: Path | None = typer.Option(None, "--output", "-o", help="Screenshot PNG path."),
     ocr: bool = typer.Option(False, "--ocr", help="Also run Apple Vision OCR on the screenshot."),
+    detect_visual: bool = typer.Option(
+        False, "--detect", help="Also run the local visual UI detector (OmniParser)."
+    ),
     base_url: _UiBaseUrl = None,
 ) -> None:
     """Capture the screen and emit a textual breakdown (screenshot + boxes) as JSON."""
@@ -559,17 +563,27 @@ def ui_screen(
     path = output or (DEFAULT_STATE_DIR / "screens" / f"screen-{int(time.time())}.png")
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_bytes(data)
+    width = tree.rect.width if tree.rect else 0
+    height = tree.rect.height if tree.rect else 0
     ocr_results = None
     if ocr:
-        width = tree.rect.width if tree.rect else 0
-        height = tree.rect.height if tree.rect else 0
         try:
             ocr_results = recognize(str(path), screen_width=width, screen_height=height)
         except OcrUnavailable as exc:
             _emit(OperationResult.failure(Action.SCREEN, ErrorCode.OCR_UNAVAILABLE, str(exc)))
+    detections = None
+    if detect_visual:
+        try:
+            detections = detect(str(path), screen_width=width, screen_height=height)
+        except DetectorUnavailable as exc:
+            _emit(OperationResult.failure(Action.SCREEN, ErrorCode.DETECTOR_UNAVAILABLE, str(exc)))
     state = load_session_state(DEFAULT_STATE_DIR)
     description = describe_screen(
-        tree, screenshot=str(path), bundle_id=state.bundle_id if state else None, ocr=ocr_results
+        tree,
+        screenshot=str(path),
+        bundle_id=state.bundle_id if state else None,
+        ocr=ocr_results,
+        detections=detections,
     )
     typer.echo(description.model_dump_json(indent=2, exclude_none=True))
 

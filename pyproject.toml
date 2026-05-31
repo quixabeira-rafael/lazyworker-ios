@@ -33,6 +33,14 @@ dependencies = [
 ocr = [
     "ocrmac>=1.0",
 ]
+detect = [
+    "ultralytics>=8.3",
+    "transformers==4.49.0",
+    "timm",
+    "einops>=0.8",
+    "huggingface_hub",
+    "pillow",
+]
 dev = [
     "pytest>=8.0",
     "pytest-httpx>=0.30",
@@ -64,8 +72,16 @@ files = ["src"]
 plugins = ["pydantic.mypy"]
 
 [[tool.mypy.overrides]]
-module = ["ocrmac.*"]
+module = [
+    "ocrmac.*",
+    "torch.*",
+    "ultralytics.*",
+    "transformers.*",
+    "huggingface_hub.*",
+    "PIL.*",
+]
 ignore_missing_imports = true
+follow_imports = "skip"
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
