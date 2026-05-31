@@ -91,6 +91,29 @@ def test_type_text_sends_keys(httpx_mock: HTTPXMock) -> None:
     assert b"joilane" in httpx_mock.get_requests()[0].content
 
 
+def test_status_handles_null_value(httpx_mock: HTTPXMock) -> None:
+    httpx_mock.add_response(url=f"{BASE_URL}/status", json={"value": None, "sessionId": None})
+    status = WdaClient(BASE_URL).status()
+    assert status.ready is False
+
+
+def test_value_missing_raises() -> None:
+    with pytest.raises(WdaResponseError):
+        WdaClient.value({"sessionId": "x"})
+
+
+def test_source_missing_value_raises(httpx_mock: HTTPXMock) -> None:
+    httpx_mock.add_response(url=f"{BASE_URL}/source?format=json", json={"sessionId": "x"})
+    with pytest.raises(WdaResponseError):
+        Session(WdaClient(BASE_URL), "S1").source()
+
+
+def test_screenshot_invalid_base64_raises(httpx_mock: HTTPXMock) -> None:
+    httpx_mock.add_response(url=f"{BASE_URL}/screenshot", json={"value": "a"})
+    with pytest.raises(WdaResponseError):
+        Session(WdaClient(BASE_URL), "S1").screenshot()
+
+
 def test_error_payload_raises(httpx_mock: HTTPXMock) -> None:
     httpx_mock.add_response(
         url=f"{BASE_URL}/status",

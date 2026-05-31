@@ -4,9 +4,13 @@ import contextlib
 import os
 import signal
 import subprocess
+import time
 from collections.abc import Sequence
 from pathlib import Path
 from typing import IO, Protocol, runtime_checkable
+
+_TERM_GRACE_SECONDS = 5.0
+_TERM_POLL_SECONDS = 0.1
 
 
 @runtime_checkable
@@ -74,5 +78,23 @@ class SubprocessProcessManager:
         return _SubprocessHandle(process, log_file)
 
     def terminate(self, pid: int) -> None:
-        with contextlib.suppress(ProcessLookupError):
-            os.kill(pid, signal.SIGTERM)
+        """Terminate the process group, escalating to SIGKILL if it lingers.
+
+        ``PermissionError`` (the group is gone/reaped or no longer ours) is treated
+        as "stop" so we never escalate against a reused PID we do not own.
+        """
+        try:
+            pgid = os.getpgid(pid)
+        except (ProcessLookupError, PermissionError):
+            return
+        with contextlib.suppress(ProcessLookupError, PermissionError):
+            os.killpg(pgid, signal.SIGTERM)
+        deadline = time.monotonic() + _TERM_GRACE_SECONDS
+        while time.monotonic() < deadline:
+            try:
+                os.killpg(pgid, 0)
+            except (ProcessLookupError, PermissionError):
+                return
+            time.sleep(_TERM_POLL_SECONDS)
+        with contextlib.suppress(ProcessLookupError, PermissionError):
+            os.killpg(pgid, signal.SIGKILL)

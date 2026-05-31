@@ -1,0 +1,19 @@
+# Copy to lazyworker.toml and fill in your values. lazyworker.toml is gitignored.
+
+[signing]
+# "simulator" needs no signing. "free" uses a free Apple ID (7-day provisioning).
+# "paid" uses a paid Apple Developer account (~1 year).
+mode = "simulator"
+
+# Required for "free"/"paid". The 10-char Team ID of an account signed into Xcode.
+# Run `lazyworker doctor` to list the teams available in Xcode (free ones included).
+# team_id = "XXXXXXXXXX"
+
+# Unique prefix for the WebDriverAgent runner bundle id (must be yours, not com.facebook).
+bundle_id_prefix = "com.example.wda"
+
+[wda]
+base_url = "http://127.0.0.1:8100"
+port = 8100
+# Optional: pin the WebDriverAgent git ref (tag/branch) cloned by bootstrap.
+# version = "v9.0.0"

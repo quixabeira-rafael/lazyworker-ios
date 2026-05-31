@@ -3,6 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from pathlib import Path
 
+from lazyworker.bootstrap.errors import BootstrapError
 from lazyworker.bootstrap.process import ManagedProcess, ProcessManager
 from lazyworker.devices.runner import CommandRunner
 
@@ -31,6 +32,7 @@ class WdaProject:
     source_dir: Path
     derived_data_dir: Path
     repository: str = WDA_REPOSITORY
+    ref: str | None = None
 
     @property
     def project_path(self) -> Path:
@@ -58,26 +60,26 @@ class WdaProvisioner:
         if self._project.is_present():
             return
         self._project.source_dir.parent.mkdir(parents=True, exist_ok=True)
-        self._runner.run(
-            [
-                "git",
-                "clone",
-                "--depth",
-                "1",
-                self._project.repository,
-                str(self._project.source_dir),
-            ],
-            timeout=CLONE_TIMEOUT,
-        )
+        args = ["git", "clone", "--depth", "1"]
+        if self._project.ref:
+            args += ["--branch", self._project.ref]
+        args += [self._project.repository, str(self._project.source_dir)]
+        self._runner.run(args, timeout=CLONE_TIMEOUT)
 
     def set_runner_bundle_id(self, bundle_id: str) -> None:
         """Rewrite the runner's bundle id so a free account can sign it (idempotent)."""
         pbxproj = self._project.project_path / "project.pbxproj"
         text = pbxproj.read_text()
+        target = f"PRODUCT_BUNDLE_IDENTIFIER = {bundle_id};"
+        if target in text:
+            return
         marker = f"PRODUCT_BUNDLE_IDENTIFIER = {DEFAULT_RUNNER_BUNDLE_ID};"
         if marker not in text:
-            return
-        pbxproj.write_text(text.replace(marker, f"PRODUCT_BUNDLE_IDENTIFIER = {bundle_id};"))
+            raise BootstrapError(
+                "Could not find the WebDriverAgentRunner bundle id in the project; "
+                "the WebDriverAgent layout may have changed."
+            )
+        pbxproj.write_text(text.replace(marker, target))
 
 
 class WdaBuilder:

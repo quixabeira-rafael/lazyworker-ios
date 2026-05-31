@@ -55,11 +55,14 @@ class BootstrapService:
         self._forwarder = PortForwarder(process_manager)
 
     @classmethod
-    def default(cls, *, state_dir: Path | None = None) -> BootstrapService:
+    def default(
+        cls, *, state_dir: Path | None = None, ref: str | None = None
+    ) -> BootstrapService:
         resolved = state_dir or DEFAULT_STATE_DIR
         project = WdaProject(
             source_dir=resolved / "WebDriverAgent",
             derived_data_dir=resolved / "DerivedData",
+            ref=ref,
         )
         return cls(
             runner=SubprocessRunner(),
@@ -91,19 +94,22 @@ class BootstrapService:
         probe: Callable[[], bool] | None = None,
     ) -> RunState:
         """Boot the simulator, launch WDA and wait until it is ready."""
+        self._reset()
         self._simulator.boot(udid)
         self._state_dir.mkdir(parents=True, exist_ok=True)
         log_path = self._state_dir / "wda.log"
         process = self._launcher.launch(udid, log_path=log_path)
 
-        if probe is None:
-            probe = _status_probe(base_url)
-
-        if not wait_until_ready(probe, timeout=timeout, sleep=self._sleep):
+        try:
+            if probe is None:
+                probe = _status_probe(base_url)
+            if not wait_until_ready(probe, timeout=timeout, sleep=self._sleep):
+                raise BootstrapError(
+                    f"WebDriverAgent did not become ready within {timeout:.0f}s; see {log_path}"
+                )
+        except BaseException:
             self._process_manager.terminate(process.pid)
-            raise BootstrapError(
-                f"WebDriverAgent did not become ready within {timeout:.0f}s; see {log_path}"
-            )
+            raise
 
         state = RunState(
             udid=udid,
@@ -133,38 +139,40 @@ class BootstrapService:
         ``connection='usb'`` forwards the port via iproxy and talks to ``base_url``;
         ``connection='network'`` reads WDA's advertised LAN URL and talks to it directly.
         """
+        self._reset()
         self._state_dir.mkdir(parents=True, exist_ok=True)
         wda_log = self._state_dir / "wda-device.log"
         wda_process = self._launcher.launch_device(udid, signing, log_path=wda_log)
-
         forward_process = None
-        if connection == "network":
-            effective_url = wait_for_server_url(wda_log, timeout=timeout, sleep=self._sleep)
-            if effective_url is None:
-                self._process_manager.terminate(wda_process.pid)
-                raise BootstrapError(
-                    f"WebDriverAgent did not advertise a server URL within {timeout:.0f}s; "
-                    f"see {wda_log}"
+
+        try:
+            if connection == "network":
+                effective_url = wait_for_server_url(wda_log, timeout=timeout, sleep=self._sleep)
+                if effective_url is None:
+                    raise BootstrapError(
+                        f"WebDriverAgent did not advertise a server URL within {timeout:.0f}s; "
+                        f"see {wda_log}"
+                    )
+            else:
+                forward_process = self._forwarder.start(
+                    udid,
+                    local_port=local_port,
+                    device_port=device_port,
+                    log_path=self._state_dir / "iproxy.log",
                 )
-        else:
-            forward_process = self._forwarder.start(
-                udid,
-                local_port=local_port,
-                device_port=device_port,
-                log_path=self._state_dir / "iproxy.log",
-            )
-            effective_url = base_url
+                effective_url = base_url
 
-        if probe is None:
-            probe = _status_probe(effective_url)
-
-        if not wait_until_ready(probe, timeout=timeout, sleep=self._sleep):
+            if probe is None:
+                probe = _status_probe(effective_url)
+            if not wait_until_ready(probe, timeout=timeout, sleep=self._sleep):
+                raise BootstrapError(
+                    f"WebDriverAgent did not become ready within {timeout:.0f}s; see {wda_log}"
+                )
+        except BaseException:
             if forward_process is not None:
                 self._process_manager.terminate(forward_process.pid)
             self._process_manager.terminate(wda_process.pid)
-            raise BootstrapError(
-                f"WebDriverAgent did not become ready within {timeout:.0f}s; see {wda_log}"
-            )
+            raise
 
         state = RunState(
             udid=udid,
@@ -177,14 +185,24 @@ class BootstrapService:
         save_run_state(state, self._state_dir)
         return state
 
+    def _teardown(self, state: RunState) -> None:
+        if state.forward_pid is not None:
+            self._process_manager.terminate(state.forward_pid)
+        self._process_manager.terminate(state.pid)
+
+    def _reset(self) -> None:
+        """Tear down any previously running instance so up is idempotent."""
+        state = load_run_state(self._state_dir)
+        if state is not None:
+            self._teardown(state)
+            clear_run_state(self._state_dir)
+
     def down(self, *, shutdown_simulator: bool = False) -> RunState | None:
         """Terminate the running WDA process (and port-forward) and clear state."""
         state = load_run_state(self._state_dir)
         if state is None:
             return None
-        if state.forward_pid is not None:
-            self._process_manager.terminate(state.forward_pid)
-        self._process_manager.terminate(state.pid)
+        self._teardown(state)
         if shutdown_simulator and state.kind == SIMULATOR_KIND:
             self._simulator.shutdown(state.udid)
         clear_run_state(self._state_dir)

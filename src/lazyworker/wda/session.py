@@ -1,8 +1,10 @@
 from __future__ import annotations
 
 import base64
+import binascii
 from typing import TYPE_CHECKING, Any
 
+from lazyworker.wda.errors import WdaResponseError
 from lazyworker.wda.models import AccessibilityNode
 
 if TYPE_CHECKING:
@@ -21,12 +23,15 @@ class Session:
     def source(self) -> AccessibilityNode:
         """Return the current accessibility tree."""
         body = self._client.request("GET", "/source", params={"format": "json"})
-        return AccessibilityNode.model_validate(body["value"])
+        return AccessibilityNode.model_validate(self._client.value(body))
 
     def screenshot(self) -> bytes:
         """Return the current screen as PNG bytes."""
         body = self._client.request("GET", "/screenshot")
-        return base64.b64decode(body["value"])
+        try:
+            return base64.b64decode(self._client.value(body))
+        except (binascii.Error, ValueError) as exc:
+            raise WdaResponseError("WebDriverAgent returned an invalid screenshot") from exc
 
     def tap(self, x: int, y: int) -> None:
         self._perform_pointer(

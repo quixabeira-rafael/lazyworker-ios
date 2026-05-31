@@ -105,7 +105,7 @@ Exploração  ──►  Robots (RobotPattern)  ──►  Assertion
       Avalia o estado e gera exatamente o que o usuário precisa fazer.
 
 ## Estado real da máquina (do doctor ao vivo)
-- Xcode 26.5 OK; Signing OK (teams 92K8JB9444 pessoal, C5AW73KQX3 lumenalta); 1 device físico.
+- Xcode 26.5 OK; Signing OK (teams <ORPHAN_TEAM_ID> pessoal, <ORG_TEAM_ID> org); 1 device físico.
 - Pendências p/ device: instalar `iproxy` (brew libimobiledevice); device só em rede (Wi-Fi).
 - Developer Mode já habilitado no iPhone. Trust do cert: passo manual após 1ª instalação.
 
@@ -117,22 +117,21 @@ Exploração  ──►  Robots (RobotPattern)  ──►  Assertion
 - [x] `PortForwarder` (iproxy local:device), `RunState.forward_pid`,
       `BootstrapService.bootstrap(signing)/up_device/down` (mata iproxy + WDA).
 - [x] CLI `bootstrap`/`up` ramificam por `SigningMode` (lê `lazyworker.toml`).
-- [x] `iproxy` instalado (brew libimobiledevice). `lazyworker.toml` com mode=free, team 92K8JB9444.
+- [x] `iproxy` instalado (brew libimobiledevice). `lazyworker.toml` com mode=free, team <ORPHAN_TEAM_ID>.
 
 ## ACHADO importante (corrigido no doctor)
-- O build de device falhou: `No Account for Team "92K8JB9444"`. Causa: **nenhuma Apple ID
+- O build de device falhou: `No Account for Team "<ORPHAN_TEAM_ID>"`. Causa: **nenhuma Apple ID
   logada no Xcode** (`IDEProvisioningTeams` ausente). Certificado no keychain != conta no Xcode.
 - `doctor` agora cruza contas-do-Xcode (`com.apple.dt.Xcode.plist`) com certificados e
   flagra corretamente: "certificates present but no Apple ID in Xcode".
 
 ## Assinatura grátis VALIDADA (build de device ok)
-- Apple ID slz.rafael@gmail.com já estava no Xcode; team free correto = **DDWF7736HG**
-  (Personal Team da conta com News UK + Personal Team). O `92K8JB9444` era cert órfão de
-  outra identidade no keychain.
+- A Apple ID do usuário já estava logada no Xcode; team free correto = **<FREE_TEAM_ID>**
+  (Personal Team da conta logada). O `<ORPHAN_TEAM_ID>` era cert órfão de outra identidade no keychain.
 - Doctor corrigido: lê `IDEProvisioningTeamByIdentifier` (chave do Xcode 26) e valida que o
   `signing.team_id` do config existe nas contas do Xcode (lista os times free). Signing OK.
 - `lazyworker bootstrap` (mode=free) buildou e assinou: app `...WebDriverAgentRunner.xctrunner`,
-  TeamIdentifier DDWF7736HG, cert "Apple Development: RAFAEL QUIXABEIRA (37W426D25F)" auto-criado.
+  TeamIdentifier <FREE_TEAM_ID>, cert "Apple Development" auto-criado pelo provisionamento.
 
 ## E2E EM DEVICE REAL — CONCLUÍDO (validado ao vivo)
 - [x] `up --network`: lança WDA no iPhone, lê `ServerURLHere->http://IP:8100` do log,

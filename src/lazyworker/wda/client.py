@@ -88,9 +88,19 @@ class WdaClient:
             )
         return dict(body)
 
+    @staticmethod
+    def value(body: dict[str, Any]) -> Any:
+        """Return the ``value`` field of a WDA envelope, raising if it is absent."""
+        if "value" not in body:
+            raise WdaResponseError("WebDriverAgent response had no 'value' field", value=body)
+        return body["value"]
+
     def status(self) -> Status:
         body = self.request("GET", "/status")
-        return Status.model_validate(body.get("value", body))
+        payload = body.get("value")
+        if not isinstance(payload, dict):
+            payload = {}
+        return Status.model_validate(payload)
 
     def create_session(
         self,

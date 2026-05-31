@@ -49,26 +49,33 @@ def _signing_options(config: Config) -> SigningOptions:
 
 
 def _pick_device() -> str:
-    devices = DeviceRegistry.default().list(kind=DeviceKind.PHYSICAL, available_only=True)
+    devices = sorted(
+        DeviceRegistry.default().list(kind=DeviceKind.PHYSICAL, available_only=True),
+        key=lambda d: d.udid,
+    )
     if not devices:
         _fail("No physical device available; connect and pair one (see: lazyworker doctor).")
+    if len(devices) > 1:
+        listed = ", ".join(f"{d.name} ({d.udid})" for d in devices)
+        _fail(f"Multiple devices found; pass --udid. Available: {listed}")
     return devices[0].udid
 
 
 def _pick_simulator() -> str:
-    registry = DeviceRegistry.default()
-    simulators = registry.list(kind=DeviceKind.SIMULATOR, available_only=True)
+    simulators = DeviceRegistry.default().list(kind=DeviceKind.SIMULATOR, available_only=True)
     if not simulators:
         _fail("No simulator available; specify --udid.")
-    booted = [device for device in simulators if device.is_booted]
-    return (booted or simulators)[0].udid
+    booted = sorted((d for d in simulators if d.is_booted), key=lambda d: d.udid)
+    if booted:
+        return booted[0].udid
+    return sorted(simulators, key=lambda d: d.udid)[0].udid
 
 
 @app.command()
 def bootstrap() -> None:
     """Fetch and build WebDriverAgent (simulator, or signed for device per config)."""
     config = Config.load()
-    service = BootstrapService.default()
+    service = BootstrapService.default(ref=config.wda.version)
     try:
         if config.signing.mode == SigningMode.SIMULATOR:
             typer.echo("Building WebDriverAgent for the simulator (may take minutes)...")
@@ -187,9 +194,10 @@ def source(base_url: str | None = typer.Option(None, "--base-url", help="WDA bas
     try:
         with WdaClient(_base_url(base_url)) as client:
             body = client.request("GET", "/source", params={"format": "json"})
+            value = client.value(body)
     except WdaError as exc:
         _fail(str(exc))
-    tree = AccessibilityNode.model_validate(body["value"])
+    tree = AccessibilityNode.model_validate(value)
     typer.echo(tree.model_dump_json(indent=2, exclude_none=True))
 
 
@@ -204,7 +212,8 @@ def screenshot(
     try:
         with WdaClient(_base_url(base_url)) as client:
             body = client.request("GET", "/screenshot")
-    except WdaError as exc:
+            data = base64.b64decode(client.value(body))
+    except (WdaError, ValueError) as exc:
         _fail(str(exc))
-    output.write_bytes(base64.b64decode(body["value"]))
+    output.write_bytes(data)
     typer.echo(str(output))

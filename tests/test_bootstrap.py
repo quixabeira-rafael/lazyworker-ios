@@ -1,3 +1,4 @@
+import time
 from collections.abc import Sequence
 from pathlib import Path
 
@@ -5,6 +6,7 @@ import pytest
 
 from lazyworker.bootstrap.errors import BootstrapError
 from lazyworker.bootstrap.forward import PortForwarder
+from lazyworker.bootstrap.process import SubprocessProcessManager
 from lazyworker.bootstrap.readiness import wait_until_ready
 from lazyworker.bootstrap.serverurl import parse_server_url, wait_for_server_url
 from lazyworker.bootstrap.service import BootstrapService
@@ -388,6 +390,44 @@ def test_up_device_timeout_terminates_both(tmp_path: Path) -> None:
 
     assert set(manager.terminated) == {4242, 4243}
     assert load_run_state(tmp_path) is None
+
+
+def test_subprocess_manager_terminates_real_process() -> None:
+    manager = SubprocessProcessManager()
+    process = manager.spawn(["sleep", "30"])
+    assert process.is_running()
+    manager.terminate(process.pid)
+    for _ in range(60):
+        if not process.is_running():
+            break
+        time.sleep(0.1)
+    assert not process.is_running()
+
+
+def test_up_resets_existing_state(tmp_path: Path) -> None:
+    save_run_state(
+        RunState(udid="OLD", port=8100, pid=111, base_url="http://x", kind="simulator"),
+        tmp_path,
+    )
+    manager = FakeProcessManager()
+    service = BootstrapService(
+        runner=RecordingRunner(),
+        process_manager=manager,
+        project=_project(tmp_path),
+        state_dir=tmp_path,
+        sleep=lambda _: None,
+    )
+    state = service.up("U1", base_url="http://127.0.0.1:8100", port=8100, probe=lambda: True)
+    assert 111 in manager.terminated
+    assert state.udid == "U1"
+
+
+def test_set_runner_bundle_id_raises_when_marker_absent(tmp_path: Path) -> None:
+    project = _project(tmp_path)
+    project.project_path.mkdir(parents=True)
+    (project.project_path / "project.pbxproj").write_text("nothing relevant here\n")
+    with pytest.raises(BootstrapError):
+        WdaProvisioner(RecordingRunner(), project).set_runner_bundle_id("com.x.Runner")
 
 
 def test_down_terminates_forward_then_pid(tmp_path: Path) -> None:
