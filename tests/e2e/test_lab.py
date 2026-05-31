@@ -170,6 +170,85 @@ def test_tap_component_outside_tree_via_ocr(lab: None) -> None:
     assert event_log() == "tap:ocr-hidden"
 
 
+# --- smart wait: every mode, success and error ---
+
+
+def test_wait_tree_change_succeeds(lab: None) -> None:
+    goto("link-wait")
+    code, result = run("ui", "tap", "--identifier", "wait-mutate", "--wait", "tree")
+    assert code == 0 and result["ok"]
+    assert result["wait"]["mode"] == "tree" and result["wait"]["ok"]
+
+
+def test_wait_tree_no_change_errors(lab: None) -> None:
+    goto("link-wait")
+    code, result = run(
+        "ui", "tap", "--identifier", "wait-noop", "--wait", "tree", "--wait-timeout", "2"
+    )
+    assert code == 25
+    assert result["error_code"] == "no_change"
+    assert not result["wait"]["ok"]
+
+
+def test_wait_screen_change_succeeds(lab: None) -> None:
+    goto("link-wait")
+    code, result = run("ui", "tap", "--identifier", "wait-mutate", "--wait", "screen")
+    assert code == 0 and result["ok"]
+    assert result["wait"]["mode"] == "screen" and result["wait"]["ok"]
+
+
+def test_wait_screen_no_change_errors(lab: None) -> None:
+    goto("link-wait")
+    code, result = run(
+        "ui", "tap", "--identifier", "wait-noop", "--wait", "screen", "--wait-timeout", "2"
+    )
+    assert code == 25
+    assert result["error_code"] == "no_change"
+    assert not result["wait"]["ok"]
+
+
+def test_wait_until_appears_succeeds(lab: None) -> None:
+    goto("link-wait")
+    assert not is_visible("wait-late")
+    code, result = run("ui", "tap", "--identifier", "wait-spawn", "--wait-until", "id=wait-late")
+    assert code == 0 and result["ok"]
+    assert result["wait"]["mode"] == "until" and result["wait"]["ok"]
+    assert is_visible("wait-late")
+
+
+def test_wait_until_never_appears_errors(lab: None) -> None:
+    goto("link-wait")
+    code, result = run(
+        "ui", "tap", "--identifier", "wait-noop", "--wait-until", "id=never", "--wait-timeout", "2"
+    )
+    assert code == 25
+    assert result["error_code"] == "no_change"
+    assert not result["wait"]["ok"]
+
+
+def test_wait_gone_disappears_succeeds(lab: None) -> None:
+    goto("link-wait")
+    assert is_visible("wait-removable")
+    code, result = run(
+        "ui", "tap", "--identifier", "wait-despawn", "--wait-gone", "id=wait-removable"
+    )
+    assert code == 0 and result["ok"]
+    assert result["wait"]["mode"] == "gone" and result["wait"]["ok"]
+    assert not is_visible("wait-removable")
+
+
+def test_wait_gone_stays_errors(lab: None) -> None:
+    goto("link-wait")
+    assert is_visible("wait-removable")
+    code, result = run(
+        "ui", "tap", "--identifier", "wait-noop",
+        "--wait-gone", "id=wait-removable", "--wait-timeout", "2",
+    )
+    assert code == 25
+    assert result["error_code"] == "no_change"
+    assert not result["wait"]["ok"]
+
+
 def test_screenshot(lab: None, tmp_path: object) -> None:
     import pathlib
 

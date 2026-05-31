@@ -9,6 +9,8 @@ from lazyworker.interaction.models import (
     MatchedElement,
     OperationResult,
     ScrollDirection,
+    WaitMode,
+    WaitOutcome,
     exit_code_for,
 )
 from lazyworker.interaction.ocr import OcrText, OcrUnavailable, recognize
@@ -23,6 +25,12 @@ from lazyworker.interaction.state import (
     clear_session_state,
     load_session_state,
     save_session_state,
+)
+from lazyworker.interaction.wait import (
+    WaitSpec,
+    WaitUnavailable,
+    tree_signature,
+    wait_for,
 )
 
 __all__ = [
@@ -49,6 +57,10 @@ __all__ = [
     "SessionOptions",
     "SessionState",
     "SnapshotSettings",
+    "WaitMode",
+    "WaitOutcome",
+    "WaitSpec",
+    "WaitUnavailable",
     "build_interactor",
     "clear_session_state",
     "describe_screen",
@@ -59,4 +71,6 @@ __all__ = [
     "open_session",
     "run_operation",
     "save_session_state",
+    "tree_signature",
+    "wait_for",
 ]

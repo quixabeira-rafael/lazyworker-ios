@@ -29,6 +29,7 @@ from lazyworker.interaction.models import (
     ErrorCode,
     OperationResult,
     ScrollDirection,
+    WaitMode,
     exit_code_for,
 )
 from lazyworker.interaction.ocr import OcrUnavailable, recognize
@@ -46,6 +47,12 @@ from lazyworker.interaction.state import (
     clear_session_state,
     load_session_state,
     save_session_state,
+)
+from lazyworker.interaction.wait import (
+    DEFAULT_INTERVAL,
+    DEFAULT_SETTLE,
+    DEFAULT_TIMEOUT,
+    WaitSpec,
 )
 from lazyworker.wda.client import WdaClient
 from lazyworker.wda.errors import WdaConnectionError, WdaError, WdaResponseError
@@ -270,6 +277,18 @@ _AnyVis = Annotated[bool, typer.Option("--any-visibility", help="Also match invi
 _At = Annotated[str | None, typer.Option("--at", help="Coordinate fallback, X,Y.")]
 _DryRun = Annotated[bool, typer.Option("--dry-run", help="Resolve and report without acting.")]
 _UiBaseUrl = Annotated[str | None, typer.Option("--base-url", help="WDA base URL.")]
+_Wait = Annotated[
+    str | None, typer.Option("--wait", help="Wait for a diff after acting: tree|screen.")
+]
+_WaitUntil = Annotated[
+    str | None, typer.Option("--wait-until", help="Wait until selector appears (key=value).")
+]
+_WaitGone = Annotated[
+    str | None, typer.Option("--wait-gone", help="Wait until selector disappears (key=value).")
+]
+_WaitTimeout = Annotated[float, typer.Option("--wait-timeout", help="Smart-wait timeout (s).")]
+_WaitSettle = Annotated[int, typer.Option("--wait-settle", help="Stable polls to settle.")]
+_WaitInterval = Annotated[float, typer.Option("--wait-interval", help="Poll interval (s).")]
 
 
 def _classify_wda(exc: WdaError) -> ErrorCode:
@@ -346,6 +365,72 @@ def _locator(
     )
 
 
+_PREDICATE_FIELDS = {
+    "type": "type",
+    "label": "label",
+    "name": "name",
+    "value": "value",
+    "identifier": "identifier",
+    "id": "identifier",
+}
+
+
+def _predicate_locator(action: Action, spec: str) -> Locator:
+    if "=" not in spec:
+        _emit(
+            OperationResult.failure(
+                action, ErrorCode.INVALID_TARGET, f"invalid predicate '{spec}', expected key=value"
+            )
+        )
+    key, _, value = spec.partition("=")
+    field = _PREDICATE_FIELDS.get(key.strip())
+    if field is None:
+        _emit(
+            OperationResult.failure(
+                action, ErrorCode.INVALID_TARGET, f"unknown predicate key '{key.strip()}'"
+            )
+        )
+    return Locator(**{field: value}, visible=True)
+
+
+def _build_wait(
+    action: Action,
+    wait: str | None,
+    wait_until: str | None,
+    wait_gone: str | None,
+    timeout: float,
+    settle: int,
+    interval: float,
+) -> WaitSpec | None:
+    common = {"timeout": timeout, "settle": settle, "interval": interval}
+    if wait_until is not None:
+        locator = _predicate_locator(action, wait_until)
+        return WaitSpec(mode=WaitMode.UNTIL, locator=locator, **common)
+    if wait_gone is not None:
+        locator = _predicate_locator(action, wait_gone)
+        return WaitSpec(mode=WaitMode.GONE, locator=locator, **common)
+    if wait is None:
+        return None
+    if wait not in ("tree", "screen"):
+        _emit(
+            OperationResult.failure(
+                action, ErrorCode.INVALID_TARGET, f"--wait must be 'tree' or 'screen', got '{wait}'"
+            )
+        )
+    if wait == "screen":
+        try:
+            import PIL  # noqa: F401
+        except ImportError:
+            _emit(
+                OperationResult.failure(
+                    action,
+                    ErrorCode.INVALID_TARGET,
+                    "screen diff needs Pillow; install: pip install 'lazyworker[ocr]'",
+                )
+            )
+    return WaitSpec(mode=WaitMode(wait), **common)
+
+
 @ui_app.command("open")
 def ui_open(
     bundle_id: str = typer.Argument(..., help="App bundle id, e.g. com.apple.Preferences."),
@@ -416,13 +501,22 @@ def ui_tap(
     any_visibility: _AnyVis = False,
     at: _At = None,
     dry_run: _DryRun = False,
+    wait: _Wait = None,
+    wait_until: _WaitUntil = None,
+    wait_gone: _WaitGone = None,
+    wait_timeout: _WaitTimeout = DEFAULT_TIMEOUT,
+    wait_settle: _WaitSettle = DEFAULT_SETTLE,
+    wait_interval: _WaitInterval = DEFAULT_INTERVAL,
     base_url: _UiBaseUrl = None,
 ) -> None:
     """Tap an element (by selector) or a coordinate."""
     interactor = _interactor(base_url)
     point = _parse_at(Action.TAP, at)
     locator = _locator(type_, label, name, value, identifier, index, any_visibility)
-    _emit(interactor.tap(locator, at=point, dry_run=dry_run))
+    spec = _build_wait(
+        Action.TAP, wait, wait_until, wait_gone, wait_timeout, wait_settle, wait_interval
+    )
+    _emit(interactor.tap(locator, at=point, dry_run=dry_run, wait=spec))
 
 
 @ui_app.command("double-tap")
@@ -471,11 +565,20 @@ def ui_scroll(
     direction: ScrollDirection = typer.Option(..., "--direction"),
     distance: float = typer.Option(DEFAULT_SCROLL_DISTANCE, "--distance"),
     dry_run: _DryRun = False,
+    wait: _Wait = None,
+    wait_until: _WaitUntil = None,
+    wait_gone: _WaitGone = None,
+    wait_timeout: _WaitTimeout = DEFAULT_TIMEOUT,
+    wait_settle: _WaitSettle = DEFAULT_SETTLE,
+    wait_interval: _WaitInterval = DEFAULT_INTERVAL,
     base_url: _UiBaseUrl = None,
 ) -> None:
     """Scroll the screen in a direction."""
     interactor = _interactor(base_url)
-    _emit(interactor.scroll(direction, amount=distance, dry_run=dry_run))
+    spec = _build_wait(
+        Action.SCROLL, wait, wait_until, wait_gone, wait_timeout, wait_settle, wait_interval
+    )
+    _emit(interactor.scroll(direction, amount=distance, dry_run=dry_run, wait=spec))
 
 
 @ui_app.command("scroll-to")
@@ -520,13 +623,22 @@ def ui_type(
     any_visibility: _AnyVis = False,
     at: _At = None,
     dry_run: _DryRun = False,
+    wait: _Wait = None,
+    wait_until: _WaitUntil = None,
+    wait_gone: _WaitGone = None,
+    wait_timeout: _WaitTimeout = DEFAULT_TIMEOUT,
+    wait_settle: _WaitSettle = DEFAULT_SETTLE,
+    wait_interval: _WaitInterval = DEFAULT_INTERVAL,
     base_url: _UiBaseUrl = None,
 ) -> None:
     """Type text, optionally tapping a field first to focus it."""
     interactor = _interactor(base_url)
     point = _parse_at(Action.TYPE, at)
     locator = _locator(type_, label, name, value, identifier, index, any_visibility)
-    _emit(interactor.type_text(text, locator=locator, at=point, dry_run=dry_run))
+    spec = _build_wait(
+        Action.TYPE, wait, wait_until, wait_gone, wait_timeout, wait_settle, wait_interval
+    )
+    _emit(interactor.type_text(text, locator=locator, at=point, dry_run=dry_run, wait=spec))
 
 
 @ui_app.command("screenshot")

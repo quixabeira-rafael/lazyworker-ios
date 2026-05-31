@@ -8,8 +8,9 @@ import typer
 from pytest_httpx import HTTPXMock
 from typer.testing import CliRunner
 
-from lazyworker.cli import _signing_options, app
+from lazyworker.cli import _build_wait, _signing_options, app
 from lazyworker.config import Config, SigningConfig, SigningMode
+from lazyworker.interaction.models import Action, WaitMode
 from lazyworker.interaction.state import SessionState, load_session_state, save_session_state
 
 runner = CliRunner()
@@ -185,6 +186,37 @@ def test_ui_screen_outputs_description(
     assert data["width"] == 400 and data["height"] == 800
     assert any(e.get("text") == "Login" for e in data["elements"])
     assert out.read_bytes() == b"\x89PNG\r\n"
+
+
+def test_build_wait_none() -> None:
+    assert _build_wait(Action.TAP, None, None, None, 5.0, 2, 0.4) is None
+
+
+def test_build_wait_diff_tree() -> None:
+    spec = _build_wait(Action.TAP, "tree", None, None, 5.0, 2, 0.4)
+    assert spec is not None and spec.mode == WaitMode.TREE
+
+
+def test_build_wait_until_predicate() -> None:
+    spec = _build_wait(Action.TAP, None, "label=Home", None, 5.0, 2, 0.4)
+    assert spec is not None and spec.mode == WaitMode.UNTIL
+    assert spec.locator is not None and spec.locator.label == "Home"
+
+
+def test_build_wait_gone_predicate_by_id() -> None:
+    spec = _build_wait(Action.TAP, None, None, "id=spinner", 5.0, 2, 0.4)
+    assert spec is not None and spec.mode == WaitMode.GONE
+    assert spec.locator is not None and spec.locator.identifier == "spinner"
+
+
+def test_build_wait_invalid_predicate_exits() -> None:
+    with pytest.raises(typer.Exit):
+        _build_wait(Action.TAP, None, "garbage", None, 5.0, 2, 0.4)
+
+
+def test_build_wait_invalid_mode_exits() -> None:
+    with pytest.raises(typer.Exit):
+        _build_wait(Action.TAP, "nope", None, None, 5.0, 2, 0.4)
 
 
 def test_ui_screen_with_ocr(

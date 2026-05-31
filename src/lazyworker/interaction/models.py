@@ -19,6 +19,7 @@ class ErrorCode(StrEnum):
     NOT_VISIBLE = "not_visible"
     OUT_OF_BOUNDS = "out_of_bounds"
     TIMEOUT = "timeout"
+    NO_CHANGE = "no_change"
     INVALID_TARGET = "invalid_target"
     OCR_UNAVAILABLE = "ocr_unavailable"
     DETECTOR_UNAVAILABLE = "detector_unavailable"
@@ -46,6 +47,24 @@ class ScrollDirection(StrEnum):
     RIGHT = "right"
 
 
+class WaitMode(StrEnum):
+    TREE = "tree"
+    SCREEN = "screen"
+    UNTIL = "until"
+    GONE = "gone"
+
+
+class WaitOutcome(BaseModel):
+    """Result of an explicit smart wait after an action."""
+
+    mode: WaitMode
+    ok: bool
+    satisfied: bool
+    settled: bool
+    attempts: int
+    elapsed_s: float
+
+
 EXIT_CODES: dict[ErrorCode, int] = {
     ErrorCode.NO_SESSION: 10,
     ErrorCode.WDA_UNREACHABLE: 11,
@@ -56,6 +75,7 @@ EXIT_CODES: dict[ErrorCode, int] = {
     ErrorCode.NOT_VISIBLE: 22,
     ErrorCode.OUT_OF_BOUNDS: 23,
     ErrorCode.TIMEOUT: 24,
+    ErrorCode.NO_CHANGE: 25,
     ErrorCode.INVALID_TARGET: 30,
     ErrorCode.OCR_UNAVAILABLE: 31,
     ErrorCode.DETECTOR_UNAVAILABLE: 32,
@@ -106,6 +126,7 @@ class OperationResult(BaseModel):
     candidates: list[MatchedElement] | None = None
     attempts: int | None = None
     dry_run: bool = False
+    wait: WaitOutcome | None = None
 
     @classmethod
     def success(

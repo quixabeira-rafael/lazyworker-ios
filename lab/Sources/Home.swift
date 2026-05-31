@@ -7,6 +7,7 @@ struct HomeView: View {
                 EventLogView()
                 List {
                     row("Tap", "link-tap") { TapLab() }
+                    row("Wait", "link-wait") { WaitLab() }
                     row("Gestures", "link-gesture") { GestureLab() }
                     row("Toggles", "link-toggle") { ToggleLab() }
                     row("Type", "link-type") { TypeLab() }

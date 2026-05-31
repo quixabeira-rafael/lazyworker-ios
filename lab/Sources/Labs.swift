@@ -20,6 +20,50 @@ struct TapLab: View {
     }
 }
 
+struct WaitLab: View {
+    @State private var counter = 0
+    @State private var spawned = false
+    @State private var removablePresent = true
+
+    var body: some View {
+        LabScreen(nav: "wait") {
+            VStack(spacing: 16) {
+                Text("\(counter)")
+                    .font(.system(size: 60, weight: .bold).monospacedDigit())
+                    .accessibilityIdentifier("wait-counter")
+                Button("Mutate") { counter += 1 }
+                    .accessibilityIdentifier("wait-mutate")
+                Button("No-op") {}
+                    .accessibilityIdentifier("wait-noop")
+                Button("Spawn") {
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) { spawned = true }
+                }
+                .accessibilityIdentifier("wait-spawn")
+                Button("Despawn") {
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) { removablePresent = false }
+                }
+                .accessibilityIdentifier("wait-despawn")
+                Button("Reset") {
+                    counter = 0
+                    spawned = false
+                    removablePresent = true
+                }
+                .accessibilityIdentifier("wait-reset")
+                if spawned {
+                    Text("late-arrival")
+                        .accessibilityIdentifier("wait-late")
+                }
+                if removablePresent {
+                    Text("removable")
+                        .accessibilityIdentifier("wait-removable")
+                }
+                Spacer()
+            }
+            .padding()
+        }
+    }
+}
+
 struct GestureLab: View {
     @EnvironmentObject var log: EventLog
 

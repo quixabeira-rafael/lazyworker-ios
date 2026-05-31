@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import time
 from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
@@ -11,6 +12,8 @@ from lazyworker.interaction.models import (
     MatchedElement,
     OperationResult,
     ScrollDirection,
+    WaitMode,
+    WaitOutcome,
 )
 from lazyworker.interaction.settings import (
     DEFAULT_SCROLL_DISTANCE,
@@ -18,6 +21,15 @@ from lazyworker.interaction.settings import (
     SessionOptions,
 )
 from lazyworker.interaction.state import load_session_state
+from lazyworker.interaction.wait import (
+    SCREEN_CHANGED_PIXELS,
+    SCREEN_STABLE_PIXELS,
+    WaitSpec,
+    image_distance,
+    image_signature,
+    tree_signature,
+    wait_for,
+)
 from lazyworker.wda.client import WdaClient
 from lazyworker.wda.errors import WdaConnectionError, WdaResponseError
 from lazyworker.wda.models import AccessibilityNode
@@ -54,10 +66,14 @@ class Interactor:
         session: Session,
         *,
         resolver: LocatorResolver | None = None,
+        sleep: Callable[[float], None] = time.sleep,
+        clock: Callable[[], float] = time.monotonic,
     ) -> None:
         self._session = session
         self._resolver = resolver or LocatorResolver()
         self._screen: Point | None = None
+        self._sleep = sleep
+        self._clock = clock
 
     def snapshot(self) -> AccessibilityNode:
         return self._session.source()
@@ -66,14 +82,29 @@ class Interactor:
         return self._session.screenshot()
 
     def tap(
-        self, locator: Locator | None = None, *, at: Point | None = None, dry_run: bool = False
+        self,
+        locator: Locator | None = None,
+        *,
+        at: Point | None = None,
+        dry_run: bool = False,
+        wait: WaitSpec | None = None,
     ) -> OperationResult:
         return self._targeted(
-            Action.TAP, lambda p: self._session.tap(*p), locator=locator, at=at, dry_run=dry_run
+            Action.TAP,
+            lambda p: self._session.tap(*p),
+            locator=locator,
+            at=at,
+            dry_run=dry_run,
+            wait=wait,
         )
 
     def double_tap(
-        self, locator: Locator | None = None, *, at: Point | None = None, dry_run: bool = False
+        self,
+        locator: Locator | None = None,
+        *,
+        at: Point | None = None,
+        dry_run: bool = False,
+        wait: WaitSpec | None = None,
     ) -> OperationResult:
         return self._targeted(
             Action.DOUBLE_TAP,
@@ -81,6 +112,7 @@ class Interactor:
             locator=locator,
             at=at,
             dry_run=dry_run,
+            wait=wait,
         )
 
     def long_press(
@@ -90,6 +122,7 @@ class Interactor:
         at: Point | None = None,
         duration: float = 0.8,
         dry_run: bool = False,
+        wait: WaitSpec | None = None,
     ) -> OperationResult:
         return self._targeted(
             Action.LONG_PRESS,
@@ -97,6 +130,7 @@ class Interactor:
             locator=locator,
             at=at,
             dry_run=dry_run,
+            wait=wait,
         )
 
     def type_text(
@@ -106,6 +140,7 @@ class Interactor:
         locator: Locator | None = None,
         at: Point | None = None,
         dry_run: bool = False,
+        wait: WaitSpec | None = None,
     ) -> OperationResult:
         element: MatchedElement | None = None
         point: Point | None = at
@@ -117,6 +152,7 @@ class Interactor:
             point = target.point
         if dry_run:
             return OperationResult.success(Action.TYPE, element=element, point=point, dry_run=True)
+        before = self._capture_before(wait)
         try:
             if point is not None:
                 self._session.tap(*point)
@@ -125,7 +161,8 @@ class Interactor:
             return OperationResult.failure(
                 Action.TYPE, self._classify(exc), str(exc), element=element
             )
-        return OperationResult.success(Action.TYPE, element=element, point=point)
+        result = OperationResult.success(Action.TYPE, element=element, point=point)
+        return self._apply_wait(result, wait, before)
 
     def scroll(
         self,
@@ -133,6 +170,7 @@ class Interactor:
         *,
         amount: float = DEFAULT_SCROLL_DISTANCE,
         dry_run: bool = False,
+        wait: WaitSpec | None = None,
     ) -> OperationResult:
         try:
             width, height = self._screen_size()
@@ -141,11 +179,13 @@ class Interactor:
         start, end = _scroll_points(width, height, direction, amount)
         if dry_run:
             return OperationResult.success(Action.SCROLL, point=start, dry_run=True)
+        before = self._capture_before(wait)
         try:
             self._session.swipe(start[0], start[1], end[0], end[1])
         except (WdaConnectionError, WdaResponseError) as exc:
             return OperationResult.failure(Action.SCROLL, self._classify(exc), str(exc))
-        return OperationResult.success(Action.SCROLL, point=start)
+        result = OperationResult.success(Action.SCROLL, point=start)
+        return self._apply_wait(result, wait, before)
 
     def scroll_to(
         self,
@@ -215,6 +255,7 @@ class Interactor:
         locator: Locator | None,
         at: Point | None,
         dry_run: bool,
+        wait: WaitSpec | None = None,
     ) -> OperationResult:
         element: MatchedElement | None = None
         if at is not None:
@@ -238,11 +279,113 @@ class Interactor:
             )
         if dry_run:
             return OperationResult.success(action, element=element, point=point, dry_run=True)
+        before = self._capture_before(wait)
         try:
             gesture(point)
         except (WdaConnectionError, WdaResponseError) as exc:
             return OperationResult.failure(action, self._classify(exc), str(exc), element=element)
-        return OperationResult.success(action, element=element, point=point)
+        result = OperationResult.success(action, element=element, point=point)
+        return self._apply_wait(result, wait, before)
+
+    def _capture_before(
+        self, wait: WaitSpec | None
+    ) -> tuple[str | None, tuple[int, ...] | None]:
+        if wait is None or wait.mode not in (WaitMode.TREE, WaitMode.SCREEN):
+            return None, None
+        try:
+            if wait.mode == WaitMode.TREE:
+                return tree_signature(self._session.source()), None
+            return None, image_signature(self._session.screenshot())
+        except (WdaConnectionError, WdaResponseError):
+            return None, None
+
+    def _apply_wait(
+        self,
+        result: OperationResult,
+        wait: WaitSpec | None,
+        before: tuple[str | None, tuple[int, ...] | None],
+    ) -> OperationResult:
+        if wait is None:
+            return result
+        outcome = self._run_wait(wait, before)
+        result.wait = outcome
+        if not outcome.ok:
+            result.ok = False
+            result.error_code = ErrorCode.NO_CHANGE
+            result.message = f"no observed {wait.mode.value} change within {wait.timeout:.0f}s"
+        return result
+
+    def _run_wait(
+        self, wait: WaitSpec, before: tuple[str | None, tuple[int, ...] | None]
+    ) -> WaitOutcome:
+        before_tree, before_img = before
+        if wait.mode == WaitMode.SCREEN:
+            empty: tuple[int, ...] = ()
+
+            def observe_img() -> tuple[int, ...]:
+                try:
+                    return image_signature(self._session.screenshot())
+                except (WdaConnectionError, WdaResponseError):
+                    return before_img if before_img is not None else empty
+
+            ok, satisfied, settled, attempts, elapsed = wait_for(
+                observe_img,
+                lambda px: before_img is not None
+                and image_distance(px, before_img) >= SCREEN_CHANGED_PIXELS,
+                same=lambda a, b: image_distance(a, b) <= SCREEN_STABLE_PIXELS,
+                timeout=wait.timeout,
+                interval=wait.interval,
+                settle=wait.settle,
+                sleep=self._sleep,
+                clock=self._clock,
+            )
+        elif wait.mode in (WaitMode.UNTIL, WaitMode.GONE):
+            assert wait.locator is not None
+            want_present = wait.mode == WaitMode.UNTIL
+
+            def observe_predicate() -> bool:
+                try:
+                    tree = self._session.source()
+                except (WdaConnectionError, WdaResponseError):
+                    return not want_present
+                resolution = self._resolver.resolve(tree, wait.locator)  # type: ignore[arg-type]
+                present = resolution.error_code != ErrorCode.NOT_FOUND
+                return present == want_present
+
+            ok, satisfied, settled, attempts, elapsed = wait_for(
+                observe_predicate,
+                lambda holds: holds,
+                timeout=wait.timeout,
+                interval=wait.interval,
+                settle=wait.settle,
+                sleep=self._sleep,
+                clock=self._clock,
+            )
+        else:  # TREE
+
+            def observe_tree() -> str:
+                try:
+                    return tree_signature(self._session.source())
+                except (WdaConnectionError, WdaResponseError):
+                    return before_tree if before_tree is not None else ""
+
+            ok, satisfied, settled, attempts, elapsed = wait_for(
+                observe_tree,
+                lambda sig: sig != before_tree,
+                timeout=wait.timeout,
+                interval=wait.interval,
+                settle=wait.settle,
+                sleep=self._sleep,
+                clock=self._clock,
+            )
+        return WaitOutcome(
+            mode=wait.mode,
+            ok=ok,
+            satisfied=satisfied,
+            settled=settled,
+            attempts=attempts,
+            elapsed_s=round(elapsed, 3),
+        )
 
     def _bounds_error(self, action: Action, point: Point) -> OperationResult | None:
         """Best-effort bounds check; only when screen size is already known."""
