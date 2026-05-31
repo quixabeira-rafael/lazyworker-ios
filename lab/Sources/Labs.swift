@@ -151,6 +151,31 @@ struct ScreenshotLab: View {
     }
 }
 
+struct CardLab: View {
+    var body: some View {
+        LabScreen(nav: "card") {
+            VStack {
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("Saldo")
+                        .font(.caption)
+                        .accessibilityIdentifier("card-title")
+                    Text("R$ 1.234,56")
+                        .font(.title)
+                        .accessibilityIdentifier("card-amount")
+                }
+                .padding()
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background(Color(.secondarySystemBackground))
+                .cornerRadius(12)
+                .accessibilityElement(children: .contain)
+                .accessibilityIdentifier("card-1")
+                Spacer()
+            }
+            .padding()
+        }
+    }
+}
+
 struct AmbiguityLab: View {
     @EnvironmentObject var log: EventLog
 

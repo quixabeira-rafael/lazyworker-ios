@@ -169,9 +169,20 @@ Exploração  ──►  Robots (RobotPattern)  ──►  Assertion
   pro centro ser o switch; `onChange` sobrescrevia o evento de clear → unificado no `onChange`.
 - Build: `xcodebuild -target ... CONFIGURATION_BUILD_DIR=...` (sem scheme); install via `simctl`.
 
+## Comando `ui screen` (quebra textual da tela) — CONCLUÍDO
+- [x] `interaction/screen.py`: `describe_screen(tree, screenshot, bundle_id)` achata a árvore de
+      acessibilidade em **caixas** (`box=[x,y,w,h]`, `size`, role, text, interactive, `container`),
+      + a caixa da tela (width/height). Ordem de leitura. Exclui wrappers estruturais.
+- [x] CLI `ui screen [-o PATH]`: captura screenshot + source, emite a `ScreenDescription` JSON.
+- [x] `CardLab` no app (card com título+valor) pra demonstrar o agrupamento card→textos.
+- [x] Validado ao vivo: card vira caixa, textos viram caixas com `container=card-1`, tudo relativo
+      à caixa da tela. Unit + CLI tests; e2e (13º caso). 122 unit, ruff + mypy strict.
+- Futuro: geometria aninhada (estilo ZStack, caixas dentro de caixas) — começamos pelo plano.
+
 ## Próximos passos
 - [ ] (Opcional) Validar o caminho USB+iproxy ao vivo.
 - [ ] (Opcional) Validar o lab + e2e em device físico.
+- [ ] (Futuro) `ui screen` aninhado (ZStack-like) e/ou overlay de Vision/OCR p/ texto desenhado.
 - [ ] Iniciar **Fase 1 (Exploração)** — base de interação agêntica + lab de validação prontos.
 - [ ] Expor actions na CLI com gestão de sessão (reusar `RunState` / sessão ativa).
 - [ ] Iniciar **Fase 1 (Exploração)** sobre a base agora funcional.

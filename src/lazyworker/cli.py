@@ -3,6 +3,7 @@ from __future__ import annotations
 import contextlib
 import json
 import sys
+import time
 from pathlib import Path
 from typing import Annotated, NoReturn
 
@@ -29,6 +30,7 @@ from lazyworker.interaction.models import (
     ScrollDirection,
     exit_code_for,
 )
+from lazyworker.interaction.screen import describe_screen
 from lazyworker.interaction.settings import (
     DEFAULT_CUSTOM_SNAPSHOT_TIMEOUT,
     DEFAULT_SCROLL_DISTANCE,
@@ -538,6 +540,28 @@ def ui_screenshot(
         _emit(OperationResult.failure(Action.SCREENSHOT, _classify_wda(exc), str(exc)))
     output.write_bytes(data)
     _emit(OperationResult(operation=Action.SCREENSHOT, ok=True, message=str(output)))
+
+
+@ui_app.command("screen")
+def ui_screen(
+    output: Path | None = typer.Option(None, "--output", "-o", help="Screenshot PNG path."),
+    base_url: _UiBaseUrl = None,
+) -> None:
+    """Capture the screen and emit a textual breakdown (screenshot + boxes) as JSON."""
+    interactor = _interactor(base_url)
+    try:
+        data = interactor.screenshot()
+        tree = interactor.snapshot()
+    except WdaError as exc:
+        _emit(OperationResult.failure(Action.SCREEN, _classify_wda(exc), str(exc)))
+    path = output or (DEFAULT_STATE_DIR / "screens" / f"screen-{int(time.time())}.png")
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_bytes(data)
+    state = load_session_state(DEFAULT_STATE_DIR)
+    description = describe_screen(
+        tree, screenshot=str(path), bundle_id=state.bundle_id if state else None
+    )
+    typer.echo(description.model_dump_json(indent=2, exclude_none=True))
 
 
 @ui_app.command("batch")

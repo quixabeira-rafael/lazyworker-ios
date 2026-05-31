@@ -10,6 +10,11 @@ from lazyworker.interaction.models import (
     ScrollDirection,
     exit_code_for,
 )
+from lazyworker.interaction.screen import (
+    ScreenDescription,
+    ScreenElement,
+    describe_screen,
+)
 from lazyworker.interaction.settings import SessionOptions, SnapshotSettings
 from lazyworker.interaction.state import (
     SessionState,
@@ -32,12 +37,15 @@ __all__ = [
     "Operation",
     "OperationResult",
     "Resolution",
+    "ScreenDescription",
+    "ScreenElement",
     "ScrollDirection",
     "SessionOptions",
     "SessionState",
     "SnapshotSettings",
     "build_interactor",
     "clear_session_state",
+    "describe_screen",
     "exit_code_for",
     "load_session_state",
     "open_session",

@@ -27,6 +27,7 @@ class Action(StrEnum):
     OPEN = "open"
     CLOSE = "close"
     TREE = "tree"
+    SCREEN = "screen"
     TAP = "tap"
     DOUBLE_TAP = "double_tap"
     LONG_PRESS = "long_press"

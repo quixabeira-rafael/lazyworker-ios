@@ -103,6 +103,21 @@ def test_batch_login_flow(lab: None) -> None:
     assert event_log() == "submitted:login=ok"
 
 
+def test_screen_breakdown(lab: None) -> None:
+    import pathlib
+
+    goto("link-card")
+    out = pathlib.Path("/tmp/lwlab_screen.png")
+    code, desc = run("ui", "screen", "-o", str(out))
+    assert code == 0
+    assert desc["width"] > 0 and desc["height"] > 0
+    assert out.exists() and out.stat().st_size > 1000
+    texts = [e.get("text") for e in desc["elements"]]
+    assert "Saldo" in texts
+    saldo = next(e for e in desc["elements"] if e.get("text") == "Saldo")
+    assert len(saldo["box"]) == 4 and saldo["size"][0] > 0
+
+
 def test_screenshot(lab: None, tmp_path: object) -> None:
     import pathlib
 

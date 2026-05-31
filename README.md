@@ -87,6 +87,18 @@ Ambiguity is returned as data, not a blind error:
 
 Add `--dry-run` to resolve and report the target without acting.
 
+**Screen breakdown** — `lazyworker ui screen` turns the current screen into agent-consumable
+text: the screenshot path, the screen box, and a flat list of elements (each a box with
+`box=[x,y,w,h]`, `size`, text, role, and a `container` grouping hint), in reading order.
+
+```json
+{ "screenshot": "~/.lazyworker/screens/screen-….png", "width": 402, "height": 874,
+  "elements": [
+    { "role": "Other", "identifier": "card-1", "box": [16,163,370,89] },
+    { "role": "StaticText", "text": "Saldo", "box": [32,179,32,15], "container": "card-1" },
+    { "role": "StaticText", "text": "R$ 1.234,56", "box": [32,202,151,34], "container": "card-1" } ] }
+```
+
 **Aggregate operations** — pipe an ordered JSON array of ops (stop-on-error by default):
 
 ```bash

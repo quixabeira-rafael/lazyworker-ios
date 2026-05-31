@@ -1,4 +1,5 @@
 import base64
+import json
 from pathlib import Path
 from typing import Any
 
@@ -166,6 +167,24 @@ def test_ui_batch_via_stdin(
     result = runner.invoke(app, ["ui", "batch"], input=ops)
     assert result.exit_code == 0
     assert '"ok": true' in result.stdout
+
+
+def test_ui_screen_outputs_description(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path, httpx_mock: HTTPXMock
+) -> None:
+    _use_state_dir(monkeypatch, tmp_path)
+    _seed_session(tmp_path)
+    png = base64.b64encode(b"\x89PNG\r\n").decode()
+    httpx_mock.add_response(url=f"{BASE}/screenshot", json={"value": png})
+    httpx_mock.add_response(url=f"{BASE}/source?format=json", json=_tree([BUTTON]))
+    out = tmp_path / "screen.png"
+    result = runner.invoke(app, ["ui", "screen", "-o", str(out)])
+    assert result.exit_code == 0
+    data = json.loads(result.stdout)
+    assert data["screenshot"] == str(out)
+    assert data["width"] == 400 and data["height"] == 800
+    assert any(e.get("text") == "Login" for e in data["elements"])
+    assert out.read_bytes() == b"\x89PNG\r\n"
 
 
 def test_ui_batch_stop_on_error_exit_code(
