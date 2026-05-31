@@ -253,7 +253,20 @@ Exploração  ──►  Robots (RobotPattern)  ──►  Assertion
       (`target.udid` + `wda.port` distintos), rodam WDA em paralelo sem colisão de estado/porta.
       Unit tests (`test_paths.py`) + gate verde. README/example atualizados.
 
-## Próximos passos
+## DECISÃO DE ESCOPO — lazyworker está COMPLETO (substrato genérico)
+O lazyworker é o **runtime genérico, project-agnostic**: lê estado (tree/screen/OCR/detect) e age
+(tap/scroll/type/wait/deeplink/share-origin), com saída JSON estruturada, smart-wait, sessões e
+estado isolado por-projeto. Ele oferece tudo pra um agente **aprender** a operar qualquer app.
+
+As 3 fases (Exploração → Robots → Assertion) são uma **FERRAMENTA SEPARADA, project-specific** —
+NÃO ficam aqui dentro. Robots são acoplados às telas/fluxos de UM app, então vivem **no repo do
+app alvo** e *consomem* a saída do lazyworker (tree/screen/OCR/OperationResult) como contrato de
+entrada. (Mesma lógica da ingestão de share: específico do app → fora de escopo do lazyworker.)
+- Fase 1 (Exploração): consome output do lazyworker → grafo de telas.
+- Fase 2 (Robots): cristaliza Robots reutilizáveis, versionados COM o app.
+- Fase 3 (Assertion): valida (pode reusar o `image_signature`/diff do smart-wait).
+
+## Próximos passos (dentro do escopo do lazyworker — opcionais/polimento)
 - [ ] (Opcional) Validar o caminho USB+iproxy ao vivo.
 - [ ] (Opcional) Validar o lab + e2e em device físico.
 - [ ] (Futuro) `ui screen` aninhado (ZStack-like) e/ou overlay de Vision/OCR p/ texto desenhado.
