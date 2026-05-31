@@ -249,6 +249,20 @@ def test_wait_gone_stays_errors(lab: None) -> None:
     assert not result["wait"]["ok"]
 
 
+def test_double_tap_wait_tree(lab: None) -> None:
+    goto("link-gesture")
+    code, result = run("ui", "double-tap", "--identifier", "btn-gesture", "--wait", "tree")
+    assert code == 0 and result["ok"]
+    assert result["wait"]["mode"] == "tree" and result["wait"]["ok"]
+
+
+def test_long_press_wait_tree(lab: None) -> None:
+    goto("link-gesture")
+    code, result = run("ui", "long-press", "--identifier", "btn-gesture", "--wait", "tree")
+    assert code == 0 and result["ok"]
+    assert result["wait"]["mode"] == "tree" and result["wait"]["ok"]
+
+
 def test_screenshot(lab: None, tmp_path: object) -> None:
     import pathlib
 

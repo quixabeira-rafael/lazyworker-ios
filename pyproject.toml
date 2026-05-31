@@ -32,6 +32,7 @@ dependencies = [
 [project.optional-dependencies]
 ocr = [
     "ocrmac>=1.0",
+    "pillow",
 ]
 detect = [
     "ultralytics>=8.3",
@@ -47,6 +48,7 @@ dev = [
     "ruff>=0.5",
     "mypy>=1.10",
     "ocrmac>=1.0",
+    "pillow",
 ]
 
 [project.scripts]

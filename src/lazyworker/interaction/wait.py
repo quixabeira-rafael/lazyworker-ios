@@ -102,7 +102,7 @@ def image_signature(png: bytes) -> tuple[int, ...]:
     image = image.crop((0, int(height * STATUS_BAR_FRACTION), width, height)).resize(
         (SCREEN_GRID, SCREEN_GRID)
     )
-    return tuple(image.getdata())
+    return tuple(image.tobytes())
 
 
 def image_distance(a: tuple[int, ...], b: tuple[int, ...]) -> int:

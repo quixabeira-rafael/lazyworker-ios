@@ -1,6 +1,9 @@
 from collections.abc import Sequence
 from pathlib import Path
 
+import pytest
+
+import lazyworker.doctor.checks as checks
 from lazyworker.bootstrap.wda import WdaProject
 from lazyworker.devices.models import ConnectionType, Device, DeviceKind, DeviceState
 from lazyworker.doctor.checks import (
@@ -167,3 +170,27 @@ def test_format_report_lists_next_steps() -> None:
     rendered = format_report(report)
     assert "Next steps:" in rendered
     assert "[manual]" in rendered
+
+
+def test_capability_checks_ok_when_modules_present(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(checks, "_has_module", lambda name: True)
+    ctx = _context()
+    assert checks.check_screen_diff(ctx).status == CheckStatus.OK
+    assert checks.check_ocr(ctx).status == CheckStatus.OK
+    assert checks.check_visual_detector(ctx).status == CheckStatus.OK
+
+
+def test_capability_checks_warn_when_modules_missing(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(checks, "_has_module", lambda name: False)
+    ctx = _context()
+    screen = checks.check_screen_diff(ctx)
+    assert screen.status == CheckStatus.WARN and screen.remediation is not None
+    assert checks.check_ocr(ctx).status == CheckStatus.WARN
+    assert checks.check_visual_detector(ctx).status == CheckStatus.WARN
+
+
+def test_build_report_includes_capabilities(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(checks, "_has_module", lambda name: True)
+    report = build_report(_context())
+    names = {r.name for r in report.results}
+    assert {"Screenshot diff", "Vision OCR", "Visual detector"} <= names

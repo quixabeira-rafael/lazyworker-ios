@@ -67,7 +67,14 @@ app = typer.Typer(
 
 ui_app = typer.Typer(
     no_args_is_help=True,
-    help="Agentic app interaction: open/close a session and act on the accessibility tree.",
+    help=(
+        "Agentic app interaction: open/close a session and act on the accessibility tree. "
+        "Selectors: --type/--label/--name/--value/--identifier (+ --index). Smart wait: "
+        "--wait tree|screen, --wait-until/--wait-gone key=value. "
+        "Exit codes: 0 ok, 10 no_session, 20 not_found, 21 ambiguous, 22 not_visible, "
+        "23 out_of_bounds, 24 timeout, 25 no_change, 30 invalid_target, 31 ocr_unavailable, "
+        "32 detector_unavailable."
+    ),
 )
 app.add_typer(ui_app, name="ui")
 
@@ -278,17 +285,40 @@ _At = Annotated[str | None, typer.Option("--at", help="Coordinate fallback, X,Y.
 _DryRun = Annotated[bool, typer.Option("--dry-run", help="Resolve and report without acting.")]
 _UiBaseUrl = Annotated[str | None, typer.Option("--base-url", help="WDA base URL.")]
 _Wait = Annotated[
-    str | None, typer.Option("--wait", help="Wait for a diff after acting: tree|screen.")
+    str | None,
+    typer.Option(
+        "--wait",
+        help="Require a diff after acting: 'tree' (structural) or 'screen' (pixel). "
+        "No change within the timeout => exit 25 (no_change), ok=false.",
+    ),
 ]
 _WaitUntil = Annotated[
-    str | None, typer.Option("--wait-until", help="Wait until selector appears (key=value).")
+    str | None,
+    typer.Option(
+        "--wait-until",
+        help="Wait until a selector appears. Predicate key=value; "
+        "keys: type|label|name|value|identifier|id (e.g. id=spinner). Times out => exit 25.",
+    ),
 ]
 _WaitGone = Annotated[
-    str | None, typer.Option("--wait-gone", help="Wait until selector disappears (key=value).")
+    str | None,
+    typer.Option(
+        "--wait-gone",
+        help="Wait until a selector disappears. Predicate key=value; "
+        "keys: type|label|name|value|identifier|id (e.g. label=Loading). Times out => exit 25.",
+    ),
 ]
-_WaitTimeout = Annotated[float, typer.Option("--wait-timeout", help="Smart-wait timeout (s).")]
-_WaitSettle = Annotated[int, typer.Option("--wait-settle", help="Stable polls to settle.")]
-_WaitInterval = Annotated[float, typer.Option("--wait-interval", help="Poll interval (s).")]
+_WaitTimeout = Annotated[
+    float, typer.Option("--wait-timeout", help="Smart-wait deadline in seconds.")
+]
+_WaitSettle = Annotated[
+    int,
+    typer.Option(
+        "--wait-settle",
+        help="Consecutive unchanged polls required before accepting success (stability).",
+    ),
+]
+_WaitInterval = Annotated[float, typer.Option("--wait-interval", help="Poll interval in seconds.")]
 
 
 def _classify_wda(exc: WdaError) -> ErrorCode:
@@ -434,10 +464,20 @@ def _build_wait(
 @ui_app.command("open")
 def ui_open(
     bundle_id: str = typer.Argument(..., help="App bundle id, e.g. com.apple.Preferences."),
-    snapshot_max_depth: int = typer.Option(DEFAULT_SNAPSHOT_MAX_DEPTH, "--snapshot-max-depth"),
-    snapshot_timeout: float = typer.Option(DEFAULT_CUSTOM_SNAPSHOT_TIMEOUT, "--snapshot-timeout"),
+    snapshot_max_depth: int = typer.Option(
+        DEFAULT_SNAPSHOT_MAX_DEPTH,
+        "--snapshot-max-depth",
+        help="Max accessibility-tree depth to fetch (caps huge dumps).",
+    ),
+    snapshot_timeout: float = typer.Option(
+        DEFAULT_CUSTOM_SNAPSHOT_TIMEOUT,
+        "--snapshot-timeout",
+        help="Per-snapshot timeout in seconds (raise for slow/heavy apps).",
+    ),
     wait_for_quiescence: bool = typer.Option(
-        False, "--wait-for-quiescence/--no-wait-for-quiescence"
+        False,
+        "--wait-for-quiescence/--no-wait-for-quiescence",
+        help="Wait for animations/layout to settle on open (off keeps heavy apps from hanging).",
     ),
     reuse: bool = typer.Option(True, "--reuse/--no-reuse", help="Reuse a live session if present."),
     base_url: _UiBaseUrl = None,
@@ -530,13 +570,22 @@ def ui_double_tap(
     any_visibility: _AnyVis = False,
     at: _At = None,
     dry_run: _DryRun = False,
+    wait: _Wait = None,
+    wait_until: _WaitUntil = None,
+    wait_gone: _WaitGone = None,
+    wait_timeout: _WaitTimeout = DEFAULT_TIMEOUT,
+    wait_settle: _WaitSettle = DEFAULT_SETTLE,
+    wait_interval: _WaitInterval = DEFAULT_INTERVAL,
     base_url: _UiBaseUrl = None,
 ) -> None:
     """Double-tap an element or a coordinate."""
     interactor = _interactor(base_url)
     point = _parse_at(Action.DOUBLE_TAP, at)
     locator = _locator(type_, label, name, value, identifier, index, any_visibility)
-    _emit(interactor.double_tap(locator, at=point, dry_run=dry_run))
+    spec = _build_wait(
+        Action.DOUBLE_TAP, wait, wait_until, wait_gone, wait_timeout, wait_settle, wait_interval
+    )
+    _emit(interactor.double_tap(locator, at=point, dry_run=dry_run, wait=spec))
 
 
 @ui_app.command("long-press")
@@ -551,13 +600,22 @@ def ui_long_press(
     at: _At = None,
     duration: float = typer.Option(0.8, "--duration", help="Hold duration in seconds."),
     dry_run: _DryRun = False,
+    wait: _Wait = None,
+    wait_until: _WaitUntil = None,
+    wait_gone: _WaitGone = None,
+    wait_timeout: _WaitTimeout = DEFAULT_TIMEOUT,
+    wait_settle: _WaitSettle = DEFAULT_SETTLE,
+    wait_interval: _WaitInterval = DEFAULT_INTERVAL,
     base_url: _UiBaseUrl = None,
 ) -> None:
     """Long-press an element or a coordinate."""
     interactor = _interactor(base_url)
     point = _parse_at(Action.LONG_PRESS, at)
     locator = _locator(type_, label, name, value, identifier, index, any_visibility)
-    _emit(interactor.long_press(locator, at=point, duration=duration, dry_run=dry_run))
+    spec = _build_wait(
+        Action.LONG_PRESS, wait, wait_until, wait_gone, wait_timeout, wait_settle, wait_interval
+    )
+    _emit(interactor.long_press(locator, at=point, duration=duration, dry_run=dry_run, wait=spec))
 
 
 @ui_app.command("scroll")
@@ -643,7 +701,7 @@ def ui_type(
 
 @ui_app.command("screenshot")
 def ui_screenshot(
-    output: Path = typer.Option(Path("screenshot.png"), "--output", "-o"),
+    output: Path = typer.Option(Path("screenshot.png"), "--output", "-o", help="Output PNG path."),
     base_url: _UiBaseUrl = None,
 ) -> None:
     """Capture the current screen to a PNG using the active session."""
@@ -659,9 +717,17 @@ def ui_screenshot(
 @ui_app.command("screen")
 def ui_screen(
     output: Path | None = typer.Option(None, "--output", "-o", help="Screenshot PNG path."),
-    ocr: bool = typer.Option(False, "--ocr", help="Also run Apple Vision OCR on the screenshot."),
+    ocr: bool = typer.Option(
+        False,
+        "--ocr",
+        help="Also run Apple Vision OCR (recovers text outside the tree). "
+        "Needs: pip install 'lazyworker[ocr]'.",
+    ),
     detect_visual: bool = typer.Option(
-        False, "--detect", help="Also run the local visual UI detector (OmniParser)."
+        False,
+        "--detect",
+        help="Also run the local visual UI detector (OmniParser). "
+        "Needs: pip install 'lazyworker[detect]'.",
     ),
     base_url: _UiBaseUrl = None,
 ) -> None:

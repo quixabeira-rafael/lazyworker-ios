@@ -156,6 +156,67 @@ def check_wda_server(ctx: DoctorContext) -> CheckResult:
     )
 
 
+CAPABILITIES = "Capabilities"
+
+
+def _has_module(name: str) -> bool:
+    import importlib.util
+
+    return importlib.util.find_spec(name) is not None
+
+
+def check_screen_diff(ctx: DoctorContext) -> CheckResult:
+    if _has_module("PIL"):
+        return CheckResult(
+            group=CAPABILITIES,
+            name="Screenshot diff",
+            status=CheckStatus.OK,
+            detail="Pillow available (ui screen, --wait screen)",
+        )
+    return CheckResult(
+        group=CAPABILITIES,
+        name="Screenshot diff",
+        status=CheckStatus.WARN,
+        detail="Pillow missing; ui screen and --wait screen unavailable",
+        remediation="Install it: pip install 'lazyworker[ocr]'",
+    )
+
+
+def check_ocr(ctx: DoctorContext) -> CheckResult:
+    if _has_module("ocrmac"):
+        return CheckResult(
+            group=CAPABILITIES,
+            name="Vision OCR",
+            status=CheckStatus.OK,
+            detail="ocrmac available (ui screen --ocr)",
+        )
+    return CheckResult(
+        group=CAPABILITIES,
+        name="Vision OCR",
+        status=CheckStatus.WARN,
+        detail="ocrmac missing; ui screen --ocr unavailable",
+        remediation="Install it: pip install 'lazyworker[ocr]'",
+    )
+
+
+def check_visual_detector(ctx: DoctorContext) -> CheckResult:
+    missing = [m for m in ("torch", "ultralytics", "transformers") if not _has_module(m)]
+    if not missing:
+        return CheckResult(
+            group=CAPABILITIES,
+            name="Visual detector",
+            status=CheckStatus.OK,
+            detail="OmniParser stack available (ui screen --detect)",
+        )
+    return CheckResult(
+        group=CAPABILITIES,
+        name="Visual detector",
+        status=CheckStatus.WARN,
+        detail=f"missing {', '.join(missing)}; ui screen --detect unavailable",
+        remediation="Install it: pip install 'lazyworker[detect]'",
+    )
+
+
 def _target_devices(ctx: DoctorContext) -> list[Device]:
     physical = [d for d in ctx.devices if d.is_physical]
     if ctx.target_udid is not None:
@@ -244,6 +305,9 @@ def build_report(ctx: DoctorContext) -> DoctorReport:
         check_port_forwarding(ctx),
         check_wda_build(ctx),
         check_wda_server(ctx),
+        check_screen_diff(ctx),
+        check_ocr(ctx),
+        check_visual_detector(ctx),
     ]
     for device in _target_devices(ctx):
         results.extend(device_checks(ctx, device))
