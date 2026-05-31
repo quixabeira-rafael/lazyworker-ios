@@ -136,6 +136,27 @@ def test_ocr_recovers_hidden_text(lab: None) -> None:
     assert 0.0 <= hit["confidence"] <= 1.0
 
 
+def _box_center(box: list[int]) -> tuple[int, int]:
+    x, y, w, h = box
+    return (x + w // 2, y + h // 2)
+
+
+def test_ocr_coordinates_align_with_tree(lab: None) -> None:
+    """Calibration: the OCR box center of a visible text lands inside the SAME element's
+    accessibility-tree frame -> OCR coords share the iOS point coordinate system (no scale error).
+    """
+    goto("link-card")
+    code, desc = run("ui", "screen", "--ocr", "-o", "/tmp/lwlab_calib.png")
+    assert code == 0
+    title = next(e for e in desc["elements"] if e.get("identifier") == "card-title")
+    saldo = next(o for o in (desc.get("ocr") or []) if o["text"] == "Saldo")
+    cx, cy = _box_center(saldo["box"])
+    tx, ty, tw, th = title["box"]
+    margin = 6
+    assert tx - margin <= cx <= tx + tw + margin, f"x off: {cx} vs {title['box']}"
+    assert ty - margin <= cy <= ty + th + margin, f"y off: {cy} vs {title['box']}"
+
+
 def test_tap_component_outside_tree_via_ocr(lab: None) -> None:
     """A component hidden from the accessibility tree is tapped via OCR box + --at."""
     goto("link-ocr")
