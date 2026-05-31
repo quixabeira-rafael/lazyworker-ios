@@ -314,3 +314,24 @@ def test_ui_batch_stop_on_error_exit_code(
     result = runner.invoke(app, ["ui", "batch"], input='[{"op": "tap", "label": "Missing"}]')
     assert result.exit_code == 20
     assert '"stopped_on": 0' in result.stdout
+
+
+def test_ui_deeplink_success(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path, httpx_mock: HTTPXMock
+) -> None:
+    _use_state_dir(monkeypatch, tmp_path)
+    _seed_session(tmp_path)
+    httpx_mock.add_response(url=f"{BASE}/session/S1/url", method="POST", json={"value": None})
+    result = runner.invoke(app, ["ui", "deeplink", "lazyworker://ping"])
+    assert result.exit_code == 0
+    assert '"ok": true' in result.stdout
+    assert '"deeplink"' in result.stdout
+
+
+def test_ui_deeplink_without_session_exits_no_session(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    _use_state_dir(monkeypatch, tmp_path)
+    result = runner.invoke(app, ["ui", "deeplink", "lazyworker://ping"])
+    assert result.exit_code == 10
+    assert '"no_session"' in result.stdout

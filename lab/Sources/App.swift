@@ -45,7 +45,11 @@ struct LazyWorkerLabApp: App {
 
     var body: some Scene {
         WindowGroup {
-            HomeView().environmentObject(log)
+            HomeView()
+                .environmentObject(log)
+                .onOpenURL { url in
+                    log.record("deeplink:\(url.host ?? "")\(url.path)")
+                }
         }
     }
 }

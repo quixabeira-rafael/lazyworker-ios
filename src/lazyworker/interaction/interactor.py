@@ -164,6 +164,16 @@ class Interactor:
         result = OperationResult.success(Action.TYPE, element=element, point=point)
         return self._apply_wait(result, wait, before)
 
+    def deep_link(self, url: str, *, wait: WaitSpec | None = None) -> OperationResult:
+        """Open a deep/universal link in the active session (routes to the handling app)."""
+        before = self._capture_before(wait)
+        try:
+            self._session.deep_link(url)
+        except (WdaConnectionError, WdaResponseError) as exc:
+            return OperationResult.failure(Action.DEEPLINK, self._classify(exc), str(exc))
+        result = OperationResult(operation=Action.DEEPLINK, ok=True, message=url)
+        return self._apply_wait(result, wait, before)
+
     def scroll(
         self,
         direction: ScrollDirection,

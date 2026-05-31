@@ -249,6 +249,15 @@ def test_wait_gone_stays_errors(lab: None) -> None:
     assert not result["wait"]["ok"]
 
 
+def test_deeplink_routes_to_app(lab: None) -> None:
+    code, result = run(
+        "ui", "deeplink", "lazyworker://ping", "--wait-until", "value=deeplink:ping"
+    )
+    assert code == 0 and result["ok"]
+    assert result["wait"]["mode"] == "until" and result["wait"]["ok"]
+    assert event_log() == "deeplink:ping"
+
+
 def test_wait_failure_saves_screenshot(lab: None) -> None:
     import pathlib
 

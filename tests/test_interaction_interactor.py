@@ -144,3 +144,24 @@ def test_scroll_to_exhausted(httpx_mock: HTTPXMock) -> None:
     result = _interactor().scroll_to(Locator(label="Login"), max_swipes=2)
     assert not result.ok
     assert result.error_code == ErrorCode.NOT_VISIBLE
+
+
+URL_ENDPOINT = f"{BASE}/session/S1/url"
+
+
+def test_deep_link_success(httpx_mock: HTTPXMock) -> None:
+    httpx_mock.add_response(url=URL_ENDPOINT, method="POST", json={"value": None})
+    result = _interactor().deep_link("lazyworker://ping")
+    assert result.ok
+    assert result.operation == Action.DEEPLINK
+    assert result.message == "lazyworker://ping"
+    assert httpx_mock.get_requests()[0].url.path == "/session/S1/url"
+
+
+def test_deep_link_wda_error_classified(httpx_mock: HTTPXMock) -> None:
+    httpx_mock.add_response(
+        url=URL_ENDPOINT, method="POST", status_code=500, json={"value": {"error": "boom"}}
+    )
+    result = _interactor().deep_link("lazyworker://ping")
+    assert not result.ok
+    assert result.error_code == ErrorCode.WDA_ERROR

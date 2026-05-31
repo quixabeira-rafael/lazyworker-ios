@@ -38,6 +38,7 @@ class Action(StrEnum):
     SCROLL_TO = "scroll_to"
     TYPE = "type"
     SCREENSHOT = "screenshot"
+    DEEPLINK = "deeplink"
 
 
 class ScrollDirection(StrEnum):

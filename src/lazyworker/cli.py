@@ -545,6 +545,27 @@ def ui_close(base_url: _UiBaseUrl = None) -> None:
     _emit(OperationResult(operation=Action.CLOSE, ok=True))
 
 
+@ui_app.command("deeplink")
+def ui_deeplink(
+    url: str = typer.Argument(..., help="URL to open: custom scheme (app://path) or https://..."),
+    wait: _Wait = None,
+    wait_until: _WaitUntil = None,
+    wait_gone: _WaitGone = None,
+    wait_timeout: _WaitTimeout = DEFAULT_TIMEOUT,
+    wait_settle: _WaitSettle = DEFAULT_SETTLE,
+    wait_interval: _WaitInterval = DEFAULT_INTERVAL,
+    wait_shot: _WaitShot = True,
+    base_url: _UiBaseUrl = None,
+) -> None:
+    """Open a deep/universal link via the active session (run `ui open <bundle>` first)."""
+    interactor = _interactor(base_url)
+    spec = _build_wait(
+        Action.DEEPLINK, wait, wait_until, wait_gone, wait_timeout, wait_settle, wait_interval
+    )
+    result = interactor.deep_link(url, wait=spec)
+    _emit(_attach_wait_artifact(interactor, result, wait_shot))
+
+
 @ui_app.command("tree")
 def ui_tree(base_url: _UiBaseUrl = None) -> None:
     """Print the current accessibility tree (using the open session's settings)."""

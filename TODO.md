@@ -202,6 +202,32 @@ Exploração  ──►  Robots (RobotPattern)  ──►  Assertion
       fica de fora da suíte automatica por ser pesado — validado ao vivo.)
 - Setup validado: transformers 5.x quebra Florence-2 → pin 4.49; processor vem do Florence-2-base-ft.
 
+## Smart wait + artefato de falha — CONCLUÍDO (validado e2e)
+- [x] `interaction/wait.py`: `wait_for` (poll determinístico com `settle`), `tree_signature`
+      (hash estrutural da árvore visível), `image_signature`/`image_distance` (diff de pixels num
+      downsample 64x64, status bar cortada). Modos: `tree`/`screen` (diff) + `until`/`gone` (predicado).
+- [x] CLI: `--wait tree|screen`, `--wait-until/--wait-gone key=value`, `--wait-timeout/-settle/-interval`
+      em `tap/double-tap/long-press/scroll/type`. Falha de wait → exit 25 (`no_change`).
+- [x] Falha de wait salva screenshot do estado final (`~/.lazyworker/screens/wait-fail-*.png`) e
+      anexa o caminho no resultado (`screenshot` + `message`). `--no-wait-shot` desliga.
+- [x] `WaitLab` no app cobrindo cada modo (sucesso + erro). Unit + e2e ao vivo.
+- [x] Doctor: seção Capabilities (Pillow/ocrmac/OmniParser). `pillow` movido pro extra `[ocr]`.
+
+## Deeplink — CONCLUÍDO (validado ao vivo)
+- [x] `Session.deep_link(url)` (`POST /session/{id}/url`) exposto na CLI como `ui deeplink URL`,
+      reusando a sessão ativa; aceita os flags de `--wait*` (ex.: `--wait-until value=...`).
+- [x] Lab: scheme `lazyworker` (Info.plist parcial mesclado ao gerado) + `.onOpenURL` gravando
+      `deeplink:<host><path>` no event-log.
+- [x] Validado ao vivo: `ui deeplink lazyworker://ping --wait-until "value=deeplink:ping"` roteia
+      pro app, dispara o handler e o predicado confirma a entrega. Unit + CLI + e2e (13 casos e2e).
+- Nota: esquema custom (`app://`) roteia direto; universal link (`https://`) pode passar pelo Safari.
+
+## Share — PENDENTE (mais trabalho)
+- [ ] Share-sheet (compartilhar PARA um app): UI pura por cima de `ui`, mas instável (overlay de
+      outro processo). Sem helper/abstração ainda.
+- [ ] Primitivas de pasteboard (`setPasteboard`/`getPasteboard` do WDA) como base determinística
+      de "share via clipboard". Não implementado.
+
 ## Próximos passos
 - [ ] (Opcional) Validar o caminho USB+iproxy ao vivo.
 - [ ] (Opcional) Validar o lab + e2e em device físico.
