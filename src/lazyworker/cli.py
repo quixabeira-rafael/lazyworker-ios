@@ -11,7 +11,7 @@ import typer
 from pydantic import ValidationError
 
 from lazyworker.bootstrap.errors import BootstrapError
-from lazyworker.bootstrap.service import DEFAULT_STATE_DIR, BootstrapService
+from lazyworker.bootstrap.service import BootstrapService
 from lazyworker.bootstrap.state import load_run_state
 from lazyworker.bootstrap.wda import SigningOptions
 from lazyworker.config import Config, SigningMode
@@ -54,6 +54,8 @@ from lazyworker.interaction.wait import (
     DEFAULT_TIMEOUT,
     WaitSpec,
 )
+from lazyworker.paths import home_dir as _home_dir
+from lazyworker.paths import state_dir as _state_dir
 from lazyworker.wda.client import WdaClient
 from lazyworker.wda.errors import WdaConnectionError, WdaError, WdaResponseError
 from lazyworker.wda.models import AccessibilityNode
@@ -82,7 +84,7 @@ app.add_typer(ui_app, name="ui")
 def _base_url(override: str | None) -> str:
     if override is not None:
         return override
-    state = load_run_state(DEFAULT_STATE_DIR)
+    state = load_run_state(_state_dir())
     if state is not None:
         return state.base_url
     return Config.load().wda.base_url
@@ -127,7 +129,9 @@ def _pick_simulator() -> str:
 def bootstrap() -> None:
     """Fetch and build WebDriverAgent (simulator, or signed for device per config)."""
     config = Config.load()
-    service = BootstrapService.default(ref=config.wda.version)
+    service = BootstrapService.default(
+        state_dir=_state_dir(), home_dir=_home_dir(), ref=config.wda.version
+    )
     try:
         if config.signing.mode == SigningMode.SIMULATOR:
             typer.echo("Building WebDriverAgent for the simulator (may take minutes)...")
@@ -151,15 +155,15 @@ def up(
 ) -> None:
     """Launch WebDriverAgent on a simulator or physical device and wait until ready."""
     config = Config.load()
-    service = BootstrapService.default()
+    service = BootstrapService.default(state_dir=_state_dir(), home_dir=_home_dir())
     try:
         if config.signing.mode == SigningMode.SIMULATOR:
-            target = udid or _pick_simulator()
+            target = udid or config.target.udid or _pick_simulator()
             state = service.up(
                 target, base_url=config.wda.base_url, port=config.wda.port, timeout=timeout
             )
         else:
-            target = udid or _pick_device()
+            target = udid or config.target.udid or _pick_device()
             state = service.up_device(
                 target,
                 signing=_signing_options(config),
@@ -180,8 +184,10 @@ def down(
     ),
 ) -> None:
     """Tear down the running WebDriverAgent instance."""
-    state = BootstrapService.default().down(shutdown_simulator=shutdown_simulator)
-    clear_session_state(DEFAULT_STATE_DIR)
+    state = BootstrapService.default(
+        state_dir=_state_dir(), home_dir=_home_dir()
+    ).down(shutdown_simulator=shutdown_simulator)
+    clear_session_state(_state_dir())
     if state is None:
         typer.echo("Nothing to tear down.")
     else:
@@ -353,7 +359,7 @@ def _attach_wait_artifact(
         data = interactor.screenshot()
     except WdaError:
         return result
-    path = DEFAULT_STATE_DIR / "screens" / f"wait-fail-{int(time.time())}.png"
+    path = _state_dir() / "screens" / f"wait-fail-{int(time.time())}.png"
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_bytes(data)
     result.screenshot = str(path)
@@ -371,7 +377,7 @@ def _emit_report(report: BatchReport) -> NoReturn:
 
 
 def _interactor(base_url: str | None) -> Interactor:
-    interactor = build_interactor(DEFAULT_STATE_DIR, base_url=base_url)
+    interactor = build_interactor(_state_dir(), base_url=base_url)
     if interactor is None:
         _emit(
             OperationResult.failure(
@@ -510,7 +516,7 @@ def ui_open(
 ) -> None:
     """Open an app, create a tuned WDA session, and persist it."""
     url = _base_url(base_url)
-    existing = load_session_state(DEFAULT_STATE_DIR)
+    existing = load_session_state(_state_dir())
     if reuse and existing and existing.bundle_id == bundle_id and existing.base_url == url:
         _emit(
             OperationResult(
@@ -528,7 +534,7 @@ def ui_open(
     except WdaError as exc:
         _emit(OperationResult.failure(Action.OPEN, _classify_wda(exc), str(exc)))
     save_session_state(
-        SessionState(session_id=session.id, bundle_id=bundle_id, base_url=url), DEFAULT_STATE_DIR
+        SessionState(session_id=session.id, bundle_id=bundle_id, base_url=url), _state_dir()
     )
     _emit(OperationResult(operation=Action.OPEN, ok=True, message=f"session {session.id}"))
 
@@ -536,12 +542,12 @@ def ui_open(
 @ui_app.command("close")
 def ui_close(base_url: _UiBaseUrl = None) -> None:
     """Close the active app session."""
-    state = load_session_state(DEFAULT_STATE_DIR)
+    state = load_session_state(_state_dir())
     if state is None:
         _emit(OperationResult(operation=Action.CLOSE, ok=True, message="no active session"))
     with contextlib.suppress(WdaError):
         Session(WdaClient(base_url or state.base_url), state.session_id).delete()
-    clear_session_state(DEFAULT_STATE_DIR)
+    clear_session_state(_state_dir())
     _emit(OperationResult(operation=Action.CLOSE, ok=True))
 
 
@@ -797,7 +803,7 @@ def ui_screen(
         tree = interactor.snapshot()
     except WdaError as exc:
         _emit(OperationResult.failure(Action.SCREEN, _classify_wda(exc), str(exc)))
-    path = output or (DEFAULT_STATE_DIR / "screens" / f"screen-{int(time.time())}.png")
+    path = output or (_state_dir() / "screens" / f"screen-{int(time.time())}.png")
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_bytes(data)
     width = tree.rect.width if tree.rect else 0
@@ -814,7 +820,7 @@ def ui_screen(
             detections = detect(str(path), screen_width=width, screen_height=height)
         except DetectorUnavailable as exc:
             _emit(OperationResult.failure(Action.SCREEN, ErrorCode.DETECTOR_UNAVAILABLE, str(exc)))
-    state = load_session_state(DEFAULT_STATE_DIR)
+    state = load_session_state(_state_dir())
     description = describe_screen(
         tree,
         screenshot=str(path),

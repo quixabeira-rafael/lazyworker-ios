@@ -37,7 +37,7 @@ def _tree(children: list[dict[str, Any]]) -> dict[str, Any]:
 
 
 def _use_state_dir(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
-    monkeypatch.setattr("lazyworker.cli.DEFAULT_STATE_DIR", tmp_path)
+    monkeypatch.setattr("lazyworker.cli._state_dir", lambda: tmp_path)
 
 
 def _seed_session(tmp_path: Path) -> None:
@@ -232,7 +232,7 @@ class _ShotInteractor:
 def test_attach_wait_artifact_saves_on_no_change(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
-    monkeypatch.setattr("lazyworker.cli.DEFAULT_STATE_DIR", tmp_path)
+    monkeypatch.setattr("lazyworker.cli._state_dir", lambda: tmp_path)
     interactor = _ShotInteractor()
     result = OperationResult.failure(Action.TAP, ErrorCode.NO_CHANGE, "no observed change")
     out = _attach_wait_artifact(interactor, result, True)  # type: ignore[arg-type]
@@ -244,7 +244,7 @@ def test_attach_wait_artifact_saves_on_no_change(
 def test_attach_wait_artifact_skips_when_ok(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
-    monkeypatch.setattr("lazyworker.cli.DEFAULT_STATE_DIR", tmp_path)
+    monkeypatch.setattr("lazyworker.cli._state_dir", lambda: tmp_path)
     interactor = _ShotInteractor()
     out = _attach_wait_artifact(interactor, OperationResult.success(Action.TAP), True)  # type: ignore[arg-type]
     assert out.screenshot is None and interactor.captured == 0
@@ -253,7 +253,7 @@ def test_attach_wait_artifact_skips_when_ok(
 def test_attach_wait_artifact_skips_when_disabled(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
-    monkeypatch.setattr("lazyworker.cli.DEFAULT_STATE_DIR", tmp_path)
+    monkeypatch.setattr("lazyworker.cli._state_dir", lambda: tmp_path)
     interactor = _ShotInteractor()
     result = OperationResult.failure(Action.TAP, ErrorCode.NO_CHANGE, "no observed change")
     out = _attach_wait_artifact(interactor, result, False)  # type: ignore[arg-type]

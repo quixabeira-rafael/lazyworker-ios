@@ -17,8 +17,13 @@ autonomous agent: structured (JSON) output, descriptive help, and clear, actiona
 ## Install
 
 ```bash
-pipx install .        # or: pip install .
+pipx install .          # global, isolated CLI available on your PATH
+# for development (editable — picks up source changes), from the repo root:
+make install            # pipx install -e . using the project's Python (3.11+)
 ```
+
+Make sure `~/.local/bin` is on your PATH (`pipx ensurepath`). After that, `lazyworker`
+works from any directory — including inside the app repo you want to drive.
 
 ## Quick start (simulator)
 
@@ -128,11 +133,22 @@ mode = "free"            # simulator | free | paid
 team_id = "XXXXXXXXXX"   # required for free/paid; a team signed into Xcode
 bundle_id_prefix = "com.example.wda"
 
+[target]
+udid = "…"               # the simulator/device this repo drives (so you can omit --udid)
+# bundle_id = "com.example.app"   # the app under test (informational)
+
 [wda]
 base_url = "http://127.0.0.1:8100"
-port = 8100
+port = 8100              # give each project a distinct port to run several WDAs at once
 # version = "v9.0.0"     # optional: pin the WDA git ref
 ```
+
+`lazyworker.toml` is discovered by walking up from the current directory, so **each app
+repo/worktree pins its own target and port**. Runtime state (the active WDA, the `ui` session,
+screenshots) lives per-project under `<repo>/.lazyworker/` (gitignore it), while the shared WDA
+build stays global under `~/.lazyworker/`. This lets you drive **different simulators from
+different repos at the same time** — give each its own `[target] udid` and `[wda] port`
+(e.g. `8100`, `8101`), and `lazyworker up`/`ui`/`down` in each repo stay fully isolated.
 
 ## Library
 
@@ -157,10 +173,9 @@ agentic layer: `Interactor` (selector-resolving actions returning `OperationResu
 
 ```bash
 python3.13 -m venv .venv
-.venv/bin/pip install -e ".[dev]"
-.venv/bin/pytest
-.venv/bin/ruff check .
-.venv/bin/mypy
+make dev      # editable install with [dev] extras into .venv
+make gate     # ruff + mypy + pytest
+make install  # (re)install the global CLI in editable mode
 ```
 
 ## License

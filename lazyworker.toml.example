@@ -12,8 +12,14 @@ mode = "simulator"
 # Unique prefix for the WebDriverAgent runner bundle id (must be yours, not com.facebook).
 bundle_id_prefix = "com.example.wda"
 
+[target]
+# The simulator/device this repo drives, so `up`/`ui` don't need --udid every time.
+# udid = "18DB2880-3ECF-48EE-A5C7-AC9216840462"
+# bundle_id = "com.example.app"   # the app under test (informational)
+
 [wda]
 base_url = "http://127.0.0.1:8100"
+# Give each project a distinct port to run several WDAs at once (8100, 8101, ...).
 port = 8100
 # Optional: pin the WebDriverAgent git ref (tag/branch) cloned by bootstrap.
 # version = "v9.0.0"

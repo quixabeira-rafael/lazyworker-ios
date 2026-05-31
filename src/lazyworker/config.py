@@ -38,9 +38,17 @@ class WdaConfig(BaseModel):
     version: str | None = None
 
 
+class TargetConfig(BaseModel):
+    """The device/simulator this project drives, so the UDID needn't be repeated."""
+
+    udid: str | None = None
+    bundle_id: str | None = None
+
+
 class Config(BaseModel):
     signing: SigningConfig = Field(default_factory=SigningConfig)
     wda: WdaConfig = Field(default_factory=WdaConfig)
+    target: TargetConfig = Field(default_factory=TargetConfig)
 
     @classmethod
     def load(cls, path: str | Path | None = None) -> Config:

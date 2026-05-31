@@ -10,3 +10,4 @@ build-device/
 *.egg-info/
 screenshot.png
 lazyworker.toml
+.lazyworker/

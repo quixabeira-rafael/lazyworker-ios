@@ -240,6 +240,19 @@ Exploração  ──►  Robots (RobotPattern)  ──►  Assertion
 - [ ] (Alternativa determinística, app-específica) pasteboard (`setPasteboard`/`getPasteboard`) ou a
       injeção via App Group + deeplink `ShareMedia-` (contrato do share_handler). Não implementado.
 
+## Instalação global + estado por-projeto (concorrência) — CONCLUÍDO
+- [x] **Instalação global** via pipx editable (`make install` → `lazyworker` no PATH em qualquer
+      diretório). Makefile com `install`/`dev`/`test`/`lint`/`gate`.
+- [x] **Config por-projeto**: `lazyworker.toml` (já com upward discovery) ganhou `[target] udid`
+      (+ `bundle_id`) — `up` usa `--udid` > `target.udid` > auto-pick.
+- [x] **Isolamento de estado** (`paths.py`): runtime (run.json/session.json/screens/logs) vai pra
+      `<repo>/.lazyworker/` (gitignored), descoberto ao lado do `lazyworker.toml`; build do WDA
+      (source/DerivedData) fica global em `~/.lazyworker/`. `BootstrapService.default` separa
+      `state_dir` (runtime) de `home_dir` (build).
+- [x] **Concorrência destravada**: dois repos/worktrees, cada um com seu `lazyworker.toml`
+      (`target.udid` + `wda.port` distintos), rodam WDA em paralelo sem colisão de estado/porta.
+      Unit tests (`test_paths.py`) + gate verde. README/example atualizados.
+
 ## Próximos passos
 - [ ] (Opcional) Validar o caminho USB+iproxy ao vivo.
 - [ ] (Opcional) Validar o lab + e2e em device físico.

@@ -56,19 +56,24 @@ class BootstrapService:
 
     @classmethod
     def default(
-        cls, *, state_dir: Path | None = None, ref: str | None = None
+        cls,
+        *,
+        state_dir: Path | None = None,
+        home_dir: Path | None = None,
+        ref: str | None = None,
     ) -> BootstrapService:
-        resolved = state_dir or DEFAULT_STATE_DIR
+        runtime = state_dir or DEFAULT_STATE_DIR
+        build_home = home_dir or DEFAULT_STATE_DIR
         project = WdaProject(
-            source_dir=resolved / "WebDriverAgent",
-            derived_data_dir=resolved / "DerivedData",
+            source_dir=build_home / "WebDriverAgent",
+            derived_data_dir=build_home / "DerivedData",
             ref=ref,
         )
         return cls(
             runner=SubprocessRunner(),
             process_manager=SubprocessProcessManager(),
             project=project,
-            state_dir=resolved,
+            state_dir=runtime,
         )
 
     def bootstrap(self, *, signing: SigningOptions | None = None) -> None:
