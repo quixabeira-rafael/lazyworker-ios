@@ -222,11 +222,23 @@ Exploração  ──►  Robots (RobotPattern)  ──►  Assertion
       pro app, dispara o handler e o predicado confirma a entrega. Unit + CLI + e2e (13 casos e2e).
 - Nota: esquema custom (`app://`) roteia direto; universal link (`https://`) pode passar pelo Safari.
 
-## Share — PENDENTE (mais trabalho)
-- [ ] Share-sheet (compartilhar PARA um app): UI pura por cima de `ui`, mas instável (overlay de
-      outro processo). Sem helper/abstração ainda.
-- [ ] Primitivas de pasteboard (`setPasteboard`/`getPasteboard` do WDA) como base determinística
-      de "share via clipboard". Não implementado.
+## Share — origem genérica no lab CONCLUÍDA; ingestão fora de escopo
+- [x] Lab vira **origem genérica de share**: deeplink `lazyworker://share?type=<text|url|image|file>&value=<...>`
+      → tela `ShareLab` (raw + dados parseados no topo) → **auto-presenta a share sheet REAL do sistema**
+      (`UIActivityViewController`). Imagem/PDF gerados em runtime (sem assets). `present=manual` desliga
+      o auto-present. URL scheme `lazyworker` registrado. Unit/e2e cobrindo os 4 tipos.
+- [x] Validado: a sheet do sistema aparece via CLI (`ui deeplink`), o alvo é localizável/tocável.
+      No device o tipo filtra os alvos (imagem → igol some; url → igol aparece).
+- Conclusão (após device real): a **ingestão** pelo app-alvo depende do build/entitlements/contrato
+      dele (igol: App Group + share_handler; build de simulador sem entitlements não entrega). Isso é
+      passo **do app**, não do lazyworker → **fora de escopo**. Correção honesta: share extensions
+      **funcionam no simulador** (Flutter recomenda testar extension no sim); minha hipótese de
+      "limitação do simulador" estava errada — o bloqueio era específico do build/entitlement do igol.
+- [ ] (Lacuna p/ share-sheet driving genérico) `ui scroll` só faz swipe no centro da tela. Falta um
+      **scroll/drag ancorado por região/coordenada + duração** (gesto lento) pra rolar a linha de apps
+      e abrir "More" no device. Tijolo independente, só se formos perseguir driving genérico de sheet.
+- [ ] (Alternativa determinística, app-específica) pasteboard (`setPasteboard`/`getPasteboard`) ou a
+      injeção via App Group + deeplink `ShareMedia-` (contrato do share_handler). Não implementado.
 
 ## Próximos passos
 - [ ] (Opcional) Validar o caminho USB+iproxy ao vivo.

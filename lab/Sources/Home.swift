@@ -1,6 +1,8 @@
 import SwiftUI
 
 struct HomeView: View {
+    @EnvironmentObject var router: ShareRouter
+
     var body: some View {
         NavigationStack {
             VStack(spacing: 0) {
@@ -22,6 +24,9 @@ struct HomeView: View {
                 }
             }
             .navigationTitle("LazyWorker Lab")
+            .navigationDestination(isPresented: $router.isPresenting) {
+                ShareLabView(request: router.request)
+            }
         }
     }
 

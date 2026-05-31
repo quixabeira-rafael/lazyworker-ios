@@ -42,13 +42,19 @@ struct LabScreen<Content: View>: View {
 @main
 struct LazyWorkerLabApp: App {
     @StateObject private var log = EventLog()
+    @StateObject private var router = ShareRouter()
 
     var body: some Scene {
         WindowGroup {
             HomeView()
                 .environmentObject(log)
+                .environmentObject(router)
                 .onOpenURL { url in
-                    log.record("deeplink:\(url.host ?? "")\(url.path)")
+                    if url.host == "share" {
+                        router.receive(url)
+                    } else {
+                        log.record("deeplink:\(url.host ?? "")\(url.path)")
+                    }
                 }
         }
     }

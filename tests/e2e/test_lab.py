@@ -258,6 +258,62 @@ def test_deeplink_routes_to_app(lab: None) -> None:
     assert event_log() == "deeplink:ping"
 
 
+def _node_text(identifier: str) -> str | None:
+    node = node_by_id(identifier)
+    if node is None:
+        return None
+    return node.get("value") or node.get("label") or node.get("name")
+
+
+def test_share_screen_parses_text(lab: None) -> None:
+    code, result = run(
+        "ui", "deeplink", "lazyworker://share?type=text&value=Ola&present=manual",
+        "--wait-until", "value=share:text",
+    )
+    assert code == 0 and result["ok"]
+    assert _node_text("share-type") == "text"
+    assert _node_text("share-value") == "Ola"
+    assert _node_text("share-raw") and "type=text" in _node_text("share-raw")  # type: ignore[operator]
+
+
+def test_share_screen_parses_url(lab: None) -> None:
+    code, result = run(
+        "ui", "deeplink", "lazyworker://share?type=url&present=manual",
+        "--wait-until", "value=share:url",
+    )
+    assert code == 0 and result["ok"]
+    assert _node_text("share-type") == "url"
+    assert "spotify" in (_node_text("share-value") or "")
+
+
+def test_share_screen_parses_image(lab: None) -> None:
+    code, result = run(
+        "ui", "deeplink", "lazyworker://share?type=image&value=foto&present=manual",
+        "--wait-until", "value=share:image",
+    )
+    assert code == 0 and result["ok"]
+    assert _node_text("share-type") == "image"
+
+
+def test_share_screen_parses_file(lab: None) -> None:
+    code, result = run(
+        "ui", "deeplink", "lazyworker://share?type=file&value=rel&present=manual",
+        "--wait-until", "value=share:file",
+    )
+    assert code == 0 and result["ok"]
+    assert _node_text("share-type") == "file"
+
+
+def test_share_auto_presents_system_sheet(lab: None) -> None:
+    # Default (no present=manual): opening the share screen auto-fires the system sheet,
+    # so an app target cell appears without any extra tap.
+    code, result = run(
+        "ui", "deeplink", "lazyworker://share?type=text&value=Hi", "--wait-until", "name=shareCell"
+    )
+    assert code == 0 and result["ok"]
+    assert result["wait"]["mode"] == "until" and result["wait"]["ok"]
+
+
 def test_wait_failure_saves_screenshot(lab: None) -> None:
     import pathlib
 
