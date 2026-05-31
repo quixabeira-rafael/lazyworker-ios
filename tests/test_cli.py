@@ -8,9 +8,9 @@ import typer
 from pytest_httpx import HTTPXMock
 from typer.testing import CliRunner
 
-from lazyworker.cli import _build_wait, _signing_options, app
+from lazyworker.cli import _attach_wait_artifact, _build_wait, _signing_options, app
 from lazyworker.config import Config, SigningConfig, SigningMode
-from lazyworker.interaction.models import Action, WaitMode
+from lazyworker.interaction.models import Action, ErrorCode, OperationResult, WaitMode
 from lazyworker.interaction.state import SessionState, load_session_state, save_session_state
 
 runner = CliRunner()
@@ -217,6 +217,47 @@ def test_build_wait_invalid_predicate_exits() -> None:
 def test_build_wait_invalid_mode_exits() -> None:
     with pytest.raises(typer.Exit):
         _build_wait(Action.TAP, "nope", None, None, 5.0, 2, 0.4)
+
+
+class _ShotInteractor:
+    def __init__(self, data: bytes = b"\x89PNG\r\n") -> None:
+        self.captured = 0
+        self._data = data
+
+    def screenshot(self) -> bytes:
+        self.captured += 1
+        return self._data
+
+
+def test_attach_wait_artifact_saves_on_no_change(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    monkeypatch.setattr("lazyworker.cli.DEFAULT_STATE_DIR", tmp_path)
+    interactor = _ShotInteractor()
+    result = OperationResult.failure(Action.TAP, ErrorCode.NO_CHANGE, "no observed change")
+    out = _attach_wait_artifact(interactor, result, True)  # type: ignore[arg-type]
+    assert out.screenshot is not None
+    assert Path(out.screenshot).read_bytes() == b"\x89PNG\r\n"
+    assert out.message is not None and "saved screenshot" in out.message
+
+
+def test_attach_wait_artifact_skips_when_ok(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    monkeypatch.setattr("lazyworker.cli.DEFAULT_STATE_DIR", tmp_path)
+    interactor = _ShotInteractor()
+    out = _attach_wait_artifact(interactor, OperationResult.success(Action.TAP), True)  # type: ignore[arg-type]
+    assert out.screenshot is None and interactor.captured == 0
+
+
+def test_attach_wait_artifact_skips_when_disabled(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    monkeypatch.setattr("lazyworker.cli.DEFAULT_STATE_DIR", tmp_path)
+    interactor = _ShotInteractor()
+    result = OperationResult.failure(Action.TAP, ErrorCode.NO_CHANGE, "no observed change")
+    out = _attach_wait_artifact(interactor, result, False)  # type: ignore[arg-type]
+    assert out.screenshot is None and interactor.captured == 0
 
 
 def test_ui_screen_with_ocr(

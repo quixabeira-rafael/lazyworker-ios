@@ -127,6 +127,7 @@ class OperationResult(BaseModel):
     attempts: int | None = None
     dry_run: bool = False
     wait: WaitOutcome | None = None
+    screenshot: str | None = None
 
     @classmethod
     def success(

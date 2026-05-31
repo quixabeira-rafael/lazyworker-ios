@@ -319,6 +319,13 @@ _WaitSettle = Annotated[
     ),
 ]
 _WaitInterval = Annotated[float, typer.Option("--wait-interval", help="Poll interval in seconds.")]
+_WaitShot = Annotated[
+    bool,
+    typer.Option(
+        "--wait-shot/--no-wait-shot",
+        help="On a failed wait, save a screenshot of the final state and attach its path.",
+    ),
+]
 
 
 def _classify_wda(exc: WdaError) -> ErrorCode:
@@ -334,6 +341,25 @@ def _classify_wda(exc: WdaError) -> ErrorCode:
 def _emit(result: OperationResult) -> NoReturn:
     typer.echo(result.model_dump_json(indent=2, exclude_none=True))
     raise typer.Exit(code=0 if result.ok else exit_code_for(result.error_code))
+
+
+def _attach_wait_artifact(
+    interactor: Interactor, result: OperationResult, save: bool
+) -> OperationResult:
+    """On a failed wait, capture the final screen and attach its path to the result."""
+    if not (save and not result.ok and result.error_code == ErrorCode.NO_CHANGE):
+        return result
+    try:
+        data = interactor.screenshot()
+    except WdaError:
+        return result
+    path = DEFAULT_STATE_DIR / "screens" / f"wait-fail-{int(time.time())}.png"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_bytes(data)
+    result.screenshot = str(path)
+    if result.message:
+        result.message = f"{result.message}; saved screenshot {path}"
+    return result
 
 
 def _emit_report(report: BatchReport) -> NoReturn:
@@ -547,6 +573,7 @@ def ui_tap(
     wait_timeout: _WaitTimeout = DEFAULT_TIMEOUT,
     wait_settle: _WaitSettle = DEFAULT_SETTLE,
     wait_interval: _WaitInterval = DEFAULT_INTERVAL,
+    wait_shot: _WaitShot = True,
     base_url: _UiBaseUrl = None,
 ) -> None:
     """Tap an element (by selector) or a coordinate."""
@@ -556,7 +583,8 @@ def ui_tap(
     spec = _build_wait(
         Action.TAP, wait, wait_until, wait_gone, wait_timeout, wait_settle, wait_interval
     )
-    _emit(interactor.tap(locator, at=point, dry_run=dry_run, wait=spec))
+    result = interactor.tap(locator, at=point, dry_run=dry_run, wait=spec)
+    _emit(_attach_wait_artifact(interactor, result, wait_shot))
 
 
 @ui_app.command("double-tap")
@@ -576,6 +604,7 @@ def ui_double_tap(
     wait_timeout: _WaitTimeout = DEFAULT_TIMEOUT,
     wait_settle: _WaitSettle = DEFAULT_SETTLE,
     wait_interval: _WaitInterval = DEFAULT_INTERVAL,
+    wait_shot: _WaitShot = True,
     base_url: _UiBaseUrl = None,
 ) -> None:
     """Double-tap an element or a coordinate."""
@@ -585,7 +614,8 @@ def ui_double_tap(
     spec = _build_wait(
         Action.DOUBLE_TAP, wait, wait_until, wait_gone, wait_timeout, wait_settle, wait_interval
     )
-    _emit(interactor.double_tap(locator, at=point, dry_run=dry_run, wait=spec))
+    result = interactor.double_tap(locator, at=point, dry_run=dry_run, wait=spec)
+    _emit(_attach_wait_artifact(interactor, result, wait_shot))
 
 
 @ui_app.command("long-press")
@@ -606,6 +636,7 @@ def ui_long_press(
     wait_timeout: _WaitTimeout = DEFAULT_TIMEOUT,
     wait_settle: _WaitSettle = DEFAULT_SETTLE,
     wait_interval: _WaitInterval = DEFAULT_INTERVAL,
+    wait_shot: _WaitShot = True,
     base_url: _UiBaseUrl = None,
 ) -> None:
     """Long-press an element or a coordinate."""
@@ -615,7 +646,10 @@ def ui_long_press(
     spec = _build_wait(
         Action.LONG_PRESS, wait, wait_until, wait_gone, wait_timeout, wait_settle, wait_interval
     )
-    _emit(interactor.long_press(locator, at=point, duration=duration, dry_run=dry_run, wait=spec))
+    result = interactor.long_press(
+        locator, at=point, duration=duration, dry_run=dry_run, wait=spec
+    )
+    _emit(_attach_wait_artifact(interactor, result, wait_shot))
 
 
 @ui_app.command("scroll")
@@ -629,6 +663,7 @@ def ui_scroll(
     wait_timeout: _WaitTimeout = DEFAULT_TIMEOUT,
     wait_settle: _WaitSettle = DEFAULT_SETTLE,
     wait_interval: _WaitInterval = DEFAULT_INTERVAL,
+    wait_shot: _WaitShot = True,
     base_url: _UiBaseUrl = None,
 ) -> None:
     """Scroll the screen in a direction."""
@@ -636,7 +671,8 @@ def ui_scroll(
     spec = _build_wait(
         Action.SCROLL, wait, wait_until, wait_gone, wait_timeout, wait_settle, wait_interval
     )
-    _emit(interactor.scroll(direction, amount=distance, dry_run=dry_run, wait=spec))
+    result = interactor.scroll(direction, amount=distance, dry_run=dry_run, wait=spec)
+    _emit(_attach_wait_artifact(interactor, result, wait_shot))
 
 
 @ui_app.command("scroll-to")
@@ -687,6 +723,7 @@ def ui_type(
     wait_timeout: _WaitTimeout = DEFAULT_TIMEOUT,
     wait_settle: _WaitSettle = DEFAULT_SETTLE,
     wait_interval: _WaitInterval = DEFAULT_INTERVAL,
+    wait_shot: _WaitShot = True,
     base_url: _UiBaseUrl = None,
 ) -> None:
     """Type text, optionally tapping a field first to focus it."""
@@ -696,7 +733,8 @@ def ui_type(
     spec = _build_wait(
         Action.TYPE, wait, wait_until, wait_gone, wait_timeout, wait_settle, wait_interval
     )
-    _emit(interactor.type_text(text, locator=locator, at=point, dry_run=dry_run, wait=spec))
+    result = interactor.type_text(text, locator=locator, at=point, dry_run=dry_run, wait=spec)
+    _emit(_attach_wait_artifact(interactor, result, wait_shot))
 
 
 @ui_app.command("screenshot")

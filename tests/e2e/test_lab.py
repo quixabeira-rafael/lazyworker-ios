@@ -249,6 +249,30 @@ def test_wait_gone_stays_errors(lab: None) -> None:
     assert not result["wait"]["ok"]
 
 
+def test_wait_failure_saves_screenshot(lab: None) -> None:
+    import pathlib
+
+    goto("link-wait")
+    code, result = run(
+        "ui", "tap", "--identifier", "wait-noop", "--wait", "screen", "--wait-timeout", "2"
+    )
+    assert code == 25
+    shot = result.get("screenshot")
+    assert shot is not None, "failed wait did not attach a screenshot path"
+    assert pathlib.Path(shot).exists() and pathlib.Path(shot).stat().st_size > 1000
+    assert result["message"] and "saved screenshot" in result["message"]
+
+
+def test_wait_failure_no_shot_when_disabled(lab: None) -> None:
+    goto("link-wait")
+    code, result = run(
+        "ui", "tap", "--identifier", "wait-noop",
+        "--wait", "screen", "--wait-timeout", "2", "--no-wait-shot",
+    )
+    assert code == 25
+    assert result.get("screenshot") is None
+
+
 def test_double_tap_wait_tree(lab: None) -> None:
     goto("link-gesture")
     code, result = run("ui", "double-tap", "--identifier", "btn-gesture", "--wait", "tree")
