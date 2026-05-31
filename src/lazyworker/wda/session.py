@@ -1,0 +1,90 @@
+from __future__ import annotations
+
+import base64
+from typing import TYPE_CHECKING, Any
+
+from lazyworker.wda.models import AccessibilityNode
+
+if TYPE_CHECKING:
+    from lazyworker.wda.client import WdaClient
+
+TAP_HOLD_MS = 100
+
+
+class Session:
+    """An active WDA session bound to a launched application."""
+
+    def __init__(self, client: WdaClient, session_id: str) -> None:
+        self._client = client
+        self.id = session_id
+
+    def source(self) -> AccessibilityNode:
+        """Return the current accessibility tree."""
+        body = self._client.request("GET", "/source", params={"format": "json"})
+        return AccessibilityNode.model_validate(body["value"])
+
+    def screenshot(self) -> bytes:
+        """Return the current screen as PNG bytes."""
+        body = self._client.request("GET", "/screenshot")
+        return base64.b64decode(body["value"])
+
+    def tap(self, x: int, y: int) -> None:
+        self._perform_pointer(
+            [
+                {"type": "pointerMove", "duration": 0, "x": x, "y": y},
+                {"type": "pointerDown", "button": 0},
+                {"type": "pause", "duration": TAP_HOLD_MS},
+                {"type": "pointerUp", "button": 0},
+            ]
+        )
+
+    def swipe(
+        self,
+        from_x: int,
+        from_y: int,
+        to_x: int,
+        to_y: int,
+        *,
+        duration: float = 0.5,
+    ) -> None:
+        self._perform_pointer(
+            [
+                {"type": "pointerMove", "duration": 0, "x": from_x, "y": from_y},
+                {"type": "pointerDown", "button": 0},
+                {"type": "pointerMove", "duration": int(duration * 1000), "x": to_x, "y": to_y},
+                {"type": "pointerUp", "button": 0},
+            ]
+        )
+
+    def _perform_pointer(self, actions: list[dict[str, Any]]) -> None:
+        self._client.request(
+            "POST",
+            f"/session/{self.id}/actions",
+            json={
+                "actions": [
+                    {
+                        "type": "pointer",
+                        "id": "finger1",
+                        "parameters": {"pointerType": "touch"},
+                        "actions": actions,
+                    }
+                ]
+            },
+        )
+
+    def type_text(self, text: str) -> None:
+        """Type text into the currently focused element."""
+        self._client.request("POST", f"/session/{self.id}/wda/keys", json={"value": [text]})
+
+    def deep_link(self, url: str) -> None:
+        """Open a URL (universal/deep link) in the active app."""
+        self._client.request("POST", f"/session/{self.id}/url", json={"url": url})
+
+    def terminate(self, bundle_id: str) -> None:
+        self._client.request(
+            "POST", f"/session/{self.id}/wda/apps/terminate", json={"bundleId": bundle_id}
+        )
+
+    def delete(self) -> None:
+        """Close this WDA session."""
+        self._client.request("DELETE", f"/session/{self.id}")
