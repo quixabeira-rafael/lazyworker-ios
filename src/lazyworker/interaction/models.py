@@ -20,6 +20,7 @@ class ErrorCode(StrEnum):
     OUT_OF_BOUNDS = "out_of_bounds"
     TIMEOUT = "timeout"
     INVALID_TARGET = "invalid_target"
+    OCR_UNAVAILABLE = "ocr_unavailable"
     INTERNAL = "internal"
 
 
@@ -55,6 +56,7 @@ EXIT_CODES: dict[ErrorCode, int] = {
     ErrorCode.OUT_OF_BOUNDS: 23,
     ErrorCode.TIMEOUT: 24,
     ErrorCode.INVALID_TARGET: 30,
+    ErrorCode.OCR_UNAVAILABLE: 31,
     ErrorCode.INTERNAL: 1,
 }
 

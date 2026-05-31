@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from pydantic import BaseModel
 
+from lazyworker.interaction.ocr import OcrText
 from lazyworker.wda.models import AccessibilityNode
 
 # Roles that an agent can act on (and that anchor a "container" for grouping).
@@ -47,6 +48,7 @@ class ScreenDescription(BaseModel):
     height: int
     bundle_id: str | None = None
     elements: list[ScreenElement]
+    ocr: list[OcrText] | None = None
 
 
 def _text_of(node: AccessibilityNode) -> str | None:
@@ -61,6 +63,7 @@ def describe_screen(
     *,
     screenshot: str,
     bundle_id: str | None = None,
+    ocr: list[OcrText] | None = None,
 ) -> ScreenDescription:
     """Flatten the accessibility tree into screen boxes, in reading order."""
     width = tree.rect.width if tree.rect else 0
@@ -102,4 +105,5 @@ def describe_screen(
         height=height,
         bundle_id=bundle_id,
         elements=elements,
+        ocr=ocr,
     )

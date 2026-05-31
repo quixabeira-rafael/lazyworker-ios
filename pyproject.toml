@@ -30,11 +30,15 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
+ocr = [
+    "ocrmac>=1.0",
+]
 dev = [
     "pytest>=8.0",
     "pytest-httpx>=0.30",
     "ruff>=0.5",
     "mypy>=1.10",
+    "ocrmac>=1.0",
 ]
 
 [project.scripts]
@@ -58,6 +62,10 @@ python_version = "3.11"
 strict = true
 files = ["src"]
 plugins = ["pydantic.mypy"]
+
+[[tool.mypy.overrides]]
+module = ["ocrmac.*"]
+ignore_missing_imports = true
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

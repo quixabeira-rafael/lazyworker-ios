@@ -118,6 +118,37 @@ def test_screen_breakdown(lab: None) -> None:
     assert len(saldo["box"]) == 4 and saldo["size"][0] > 0
 
 
+def test_ocr_recovers_hidden_text(lab: None) -> None:
+    import pathlib
+
+    goto("link-ocr")
+    out = pathlib.Path("/tmp/lwlab_ocr.png")
+    code, desc = run("ui", "screen", "--ocr", "-o", str(out))
+    assert code == 0
+    # The text is hidden from the accessibility tree...
+    tree_texts = [e.get("text") for e in desc["elements"]]
+    assert not any(t and "7421" in t for t in tree_texts)
+    # ...but OCR recovers it with a box and confidence.
+    ocr = desc.get("ocr") or []
+    hit = next((o for o in ocr if "7421" in o["text"]), None)
+    assert hit is not None
+    assert len(hit["box"]) == 4
+    assert 0.0 <= hit["confidence"] <= 1.0
+
+
+def test_tap_component_outside_tree_via_ocr(lab: None) -> None:
+    """A component hidden from the accessibility tree is tapped via OCR box + --at."""
+    goto("link-ocr")
+    code, desc = run("ui", "screen", "--ocr", "-o", "/tmp/lwlab_ocrtap.png")
+    assert code == 0
+    hit = next((o for o in (desc.get("ocr") or []) if "OCR-TAP" in o["text"]), None)
+    assert hit is not None, "OCR did not find the hidden tappable component"
+    x, y, w, h = hit["box"]
+    code, result = run("ui", "tap", "--at", f"{x + w // 2},{y + h // 2}")
+    assert code == 0 and result["ok"]
+    assert event_log() == "tap:ocr-hidden"
+
+
 def test_screenshot(lab: None, tmp_path: object) -> None:
     import pathlib
 

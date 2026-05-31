@@ -99,6 +99,13 @@ text: the screenshot path, the screen box, and a flat list of elements (each a b
     { "role": "StaticText", "text": "R$ 1.234,56", "box": [32,202,151,34], "container": "card-1" } ] }
 ```
 
+Add `--ocr` to also run Apple Vision OCR on the screenshot (`pip install 'lazyworker[ocr]'`).
+This recovers text that is **not** in the accessibility tree — drawn text, images, custom views —
+as `{text, box:[x,y,w,h], size, confidence}`, in the same screen-point coordinates as the tree.
+A component outside the tree can then be acted on by coordinate: OCR gives the box, and
+`lazyworker ui tap --at <cx>,<cy>` taps its center (a real touch hits the view via hit-testing,
+regardless of accessibility).
+
 **Aggregate operations** — pipe an ordered JSON array of ops (stop-on-error by default):
 
 ```bash

@@ -10,6 +10,7 @@ from lazyworker.interaction.models import (
     ScrollDirection,
     exit_code_for,
 )
+from lazyworker.interaction.ocr import OcrText, OcrUnavailable, recognize
 from lazyworker.interaction.screen import (
     ScreenDescription,
     ScreenElement,
@@ -34,6 +35,8 @@ __all__ = [
     "Locator",
     "LocatorResolver",
     "MatchedElement",
+    "OcrText",
+    "OcrUnavailable",
     "Operation",
     "OperationResult",
     "Resolution",
@@ -47,6 +50,7 @@ __all__ = [
     "clear_session_state",
     "describe_screen",
     "exit_code_for",
+    "recognize",
     "load_session_state",
     "open_session",
     "run_operation",

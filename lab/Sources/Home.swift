@@ -14,6 +14,7 @@ struct HomeView: View {
                     row("Scroll To", "link-scrollto") { ScrollToLab() }
                     row("Screenshot", "link-screenshot") { ScreenshotLab() }
                     row("Card", "link-card") { CardLab() }
+                    row("OCR", "link-ocr") { OcrLab() }
                     row("Ambiguity", "link-ambiguity") { AmbiguityLab() }
                     row("Combined Flow", "link-combined") { CombinedFlowLab() }
                     row("Batch Flow", "link-batch") { BatchFlowLab() }

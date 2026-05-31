@@ -67,6 +67,9 @@ def is_visible(identifier: str) -> bool:
 
 def goto(link: str) -> None:
     code, _ = run("ui", "tap", "--identifier", link)
+    if code != 0:
+        run("ui", "scroll-to", "--identifier", link)
+        code, _ = run("ui", "tap", "--identifier", link)
     assert code == 0, f"navigation tap on {link} failed"
 
 

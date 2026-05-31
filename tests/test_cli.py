@@ -187,6 +187,28 @@ def test_ui_screen_outputs_description(
     assert out.read_bytes() == b"\x89PNG\r\n"
 
 
+def test_ui_screen_with_ocr(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path, httpx_mock: HTTPXMock
+) -> None:
+    from lazyworker.interaction.ocr import OcrText
+
+    _use_state_dir(monkeypatch, tmp_path)
+    _seed_session(tmp_path)
+    monkeypatch.setattr(
+        "lazyworker.cli.recognize",
+        lambda *a, **k: [OcrText(text="DRAWN", box=(1, 2, 3, 4), size=(3, 4), confidence=0.99)],
+    )
+    png = base64.b64encode(b"\x89PNG\r\n").decode()
+    httpx_mock.add_response(url=f"{BASE}/screenshot", json={"value": png})
+    httpx_mock.add_response(url=f"{BASE}/source?format=json", json=_tree([BUTTON]))
+    out = tmp_path / "screen.png"
+    result = runner.invoke(app, ["ui", "screen", "--ocr", "-o", str(out)])
+    assert result.exit_code == 0
+    data = json.loads(result.stdout)
+    assert data["ocr"][0]["text"] == "DRAWN"
+    assert data["ocr"][0]["confidence"] == 0.99
+
+
 def test_ui_batch_stop_on_error_exit_code(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path, httpx_mock: HTTPXMock
 ) -> None:

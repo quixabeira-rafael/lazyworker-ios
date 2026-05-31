@@ -179,6 +179,16 @@ Exploração  ──►  Robots (RobotPattern)  ──►  Assertion
       à caixa da tela. Unit + CLI tests; e2e (13º caso). 122 unit, ruff + mypy strict.
 - Futuro: geometria aninhada (estilo ZStack, caixas dentro de caixas) — começamos pelo plano.
 
+## `ui screen --ocr` (Apple Vision) — CONCLUÍDO
+- [x] `interaction/ocr.py`: `recognize()` roda o Apple Vision (via `ocrmac`, dependência opcional
+      `[ocr]`) e converte os boxes normalizados bottom-left do Vision → **pontos top-left** no
+      frame da tela (mesmo sistema da árvore). `OcrText` = text + box[x,y,w,h] + size + **confidence**.
+- [x] `--ocr` no `ui screen`: anexa `ocr[]` à `ScreenDescription`. ErrorCode.OCR_UNAVAILABLE.
+- [x] `OcrLab`: texto escondido da árvore (`accessibilityHidden`) + um componente **tappável**
+      escondido. Validado ao vivo: OCR recupera o texto (conf 1.00); e **tap em componente fora da
+      árvore** via OCR→centro→`tap --at` → dispara a ação (event-log `tap:ocr-hidden`).
+- [x] e2e: recuperação de texto fora da árvore + tap-por-OCR. 126 unit + 15 e2e, ruff + mypy.
+
 ## Próximos passos
 - [ ] (Opcional) Validar o caminho USB+iproxy ao vivo.
 - [ ] (Opcional) Validar o lab + e2e em device físico.

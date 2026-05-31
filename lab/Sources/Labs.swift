@@ -176,6 +176,35 @@ struct CardLab: View {
     }
 }
 
+struct OcrLab: View {
+    @EnvironmentObject var log: EventLog
+
+    var body: some View {
+        LabScreen(nav: "ocr") {
+            VStack(spacing: 40) {
+                Spacer()
+                // Visible on screen but hidden from the accessibility tree:
+                // only OCR (`ui screen --ocr`) can recover this text.
+                Text("OCR-ONLY-7421")
+                    .font(.largeTitle.bold())
+                    .padding(40)
+                    .accessibilityHidden(true)
+                // A tappable component hidden from the tree: reachable only via
+                // OCR (for its box) + a coordinate tap (`ui tap --at cx,cy`).
+                Text("OCR-TAP")
+                    .font(.title.bold())
+                    .foregroundStyle(.white)
+                    .padding(30)
+                    .background(Color.purple)
+                    .onTapGesture { log.record("tap:ocr-hidden") }
+                    .accessibilityHidden(true)
+                Spacer()
+            }
+            .padding()
+        }
+    }
+}
+
 struct AmbiguityLab: View {
     @EnvironmentObject var log: EventLog
 

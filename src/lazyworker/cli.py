@@ -30,6 +30,7 @@ from lazyworker.interaction.models import (
     ScrollDirection,
     exit_code_for,
 )
+from lazyworker.interaction.ocr import OcrUnavailable, recognize
 from lazyworker.interaction.screen import describe_screen
 from lazyworker.interaction.settings import (
     DEFAULT_CUSTOM_SNAPSHOT_TIMEOUT,
@@ -545,6 +546,7 @@ def ui_screenshot(
 @ui_app.command("screen")
 def ui_screen(
     output: Path | None = typer.Option(None, "--output", "-o", help="Screenshot PNG path."),
+    ocr: bool = typer.Option(False, "--ocr", help="Also run Apple Vision OCR on the screenshot."),
     base_url: _UiBaseUrl = None,
 ) -> None:
     """Capture the screen and emit a textual breakdown (screenshot + boxes) as JSON."""
@@ -557,9 +559,17 @@ def ui_screen(
     path = output or (DEFAULT_STATE_DIR / "screens" / f"screen-{int(time.time())}.png")
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_bytes(data)
+    ocr_results = None
+    if ocr:
+        width = tree.rect.width if tree.rect else 0
+        height = tree.rect.height if tree.rect else 0
+        try:
+            ocr_results = recognize(str(path), screen_width=width, screen_height=height)
+        except OcrUnavailable as exc:
+            _emit(OperationResult.failure(Action.SCREEN, ErrorCode.OCR_UNAVAILABLE, str(exc)))
     state = load_session_state(DEFAULT_STATE_DIR)
     description = describe_screen(
-        tree, screenshot=str(path), bundle_id=state.bundle_id if state else None
+        tree, screenshot=str(path), bundle_id=state.bundle_id if state else None, ocr=ocr_results
     )
     typer.echo(description.model_dump_json(indent=2, exclude_none=True))
 
