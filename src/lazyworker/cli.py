@@ -27,13 +27,16 @@ from lazyworker.interaction.locator import Locator
 from lazyworker.interaction.models import (
     Action,
     ErrorCode,
+    MatchedElement,
     OperationResult,
     ScrollDirection,
+    SearchResult,
     WaitMode,
     exit_code_for,
 )
 from lazyworker.interaction.ocr import OcrUnavailable, recognize
 from lazyworker.interaction.screen import describe_screen
+from lazyworker.interaction.search import search_tree
 from lazyworker.interaction.settings import (
     DEFAULT_CUSTOM_SNAPSHOT_TIMEOUT,
     DEFAULT_SCROLL_DISTANCE,
@@ -581,6 +584,52 @@ def ui_tree(base_url: _UiBaseUrl = None) -> None:
     except WdaError as exc:
         _emit(OperationResult.failure(Action.TREE, _classify_wda(exc), str(exc)))
     typer.echo(tree.model_dump_json(indent=2, exclude_none=True))
+
+
+@ui_app.command("find")
+def ui_find(
+    query: str | None = typer.Option(
+        None,
+        "--query",
+        "-q",
+        help="Free text matched (substring, case-insensitive) against label/name/value/identifier.",
+    ),
+    type_: _Type = None,
+    label: _Label = None,
+    name: _Name = None,
+    value: _Value = None,
+    identifier: _Identifier = None,
+    any_visibility: _AnyVis = False,
+    limit: int = typer.Option(0, "--limit", help="Max matches to return (0 = no limit)."),
+    base_url: _UiBaseUrl = None,
+) -> None:
+    """Search the accessibility tree and return every matching element (read-only)."""
+    if query is None and not any(v is not None for v in (type_, label, name, value, identifier)):
+        _emit(
+            OperationResult.failure(
+                Action.FIND, ErrorCode.INVALID_TARGET, "provide --query or at least one selector"
+            )
+        )
+    interactor = _interactor(base_url)
+    try:
+        tree = interactor.snapshot()
+    except WdaError as exc:
+        _emit(OperationResult.failure(Action.FIND, _classify_wda(exc), str(exc)))
+    matches = search_tree(
+        tree,
+        query=query,
+        type=type_,
+        label=label,
+        name=name,
+        value=value,
+        identifier=identifier,
+        include_hidden=any_visibility,
+        limit=limit or None,
+    )
+    result = SearchResult(
+        count=len(matches), matches=[MatchedElement.from_node(node) for node in matches]
+    )
+    typer.echo(result.model_dump_json(indent=2, exclude_none=True))
 
 
 @ui_app.command("tap")

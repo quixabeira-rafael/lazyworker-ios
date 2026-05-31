@@ -39,6 +39,7 @@ class Action(StrEnum):
     TYPE = "type"
     SCREENSHOT = "screenshot"
     DEEPLINK = "deeplink"
+    FIND = "find"
 
 
 class ScrollDirection(StrEnum):
@@ -112,6 +113,13 @@ class MatchedElement(BaseModel):
             rect=node.rect,
             visible=node.visible,
         )
+
+
+class SearchResult(BaseModel):
+    """Read-only result of a tree search: every element matching the query/filters."""
+
+    count: int
+    matches: list[MatchedElement]
 
 
 class OperationResult(BaseModel):

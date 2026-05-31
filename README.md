@@ -117,6 +117,7 @@ code so an agent can branch on `$?`.
 | `ui open BUNDLE_ID` | Open an app, create a tuned session, and persist it (`--reuse/--no-reuse`, `--snapshot-max-depth`, `--snapshot-timeout`, `--wait-for-quiescence`). |
 | `ui close` | Close the active app session. |
 | `ui tree` | Print the current accessibility tree (session-tuned snapshot). |
+| `ui find` | Search the tree (read-only); return every element matching a free-text query and/or selectors. |
 | `ui tap` | Tap an element (by selector) or a coordinate. |
 | `ui double-tap` | Double-tap an element or a coordinate. |
 | `ui long-press` | Long-press an element or a coordinate (`--duration`). |
@@ -141,6 +142,15 @@ Ambiguity is returned as data, not a blind error:
 ```json
 { "operation": "tap", "ok": false, "error_code": "ambiguous", "candidate_count": 2,
   "candidates": [ { "type": "Button", "label": "Save" }, { "type": "StaticText", "label": "Save" } ] }
+```
+
+**Search.** `ui find` is read-only and returns *every* match — free text alone (no type needed),
+with selectors as optional extra filters:
+
+```bash
+lazyworker ui find -q "joilane"               # any element whose text/id contains "joilane"
+lazyworker ui find -q "joilane" --type Cell   # type as an extra filter
+lazyworker ui find --identifier btn-primary   # exact field match
 ```
 
 **Smart wait.** Append a wait to any action and the result is only `ok` once a *verified* change

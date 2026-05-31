@@ -9,6 +9,7 @@ from lazyworker.interaction.models import (
     MatchedElement,
     OperationResult,
     ScrollDirection,
+    SearchResult,
     WaitMode,
     WaitOutcome,
     exit_code_for,
@@ -19,6 +20,7 @@ from lazyworker.interaction.screen import (
     ScreenElement,
     describe_screen,
 )
+from lazyworker.interaction.search import search_tree
 from lazyworker.interaction.settings import SessionOptions, SnapshotSettings
 from lazyworker.interaction.state import (
     SessionState,
@@ -54,6 +56,7 @@ __all__ = [
     "ScreenDescription",
     "ScreenElement",
     "ScrollDirection",
+    "SearchResult",
     "SessionOptions",
     "SessionState",
     "SnapshotSettings",
@@ -71,6 +74,7 @@ __all__ = [
     "open_session",
     "run_operation",
     "save_session_state",
+    "search_tree",
     "tree_signature",
     "wait_for",
 ]
