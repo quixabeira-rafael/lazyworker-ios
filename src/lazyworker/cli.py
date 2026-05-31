@@ -1,10 +1,13 @@
 from __future__ import annotations
 
+import contextlib
 import json
+import sys
 from pathlib import Path
-from typing import NoReturn
+from typing import Annotated, NoReturn
 
 import typer
+from pydantic import ValidationError
 
 from lazyworker.bootstrap.errors import BootstrapError
 from lazyworker.bootstrap.service import DEFAULT_STATE_DIR, BootstrapService
@@ -16,15 +19,46 @@ from lazyworker.devices.registry import DeviceRegistry
 from lazyworker.devices.runner import CommandError
 from lazyworker.doctor.checks import build_default_context, build_report
 from lazyworker.doctor.render import format_report
+from lazyworker.interaction.batch import Batch, BatchReport, BatchRunner
+from lazyworker.interaction.interactor import Interactor, build_interactor, open_session
+from lazyworker.interaction.locator import Locator
+from lazyworker.interaction.models import (
+    Action,
+    ErrorCode,
+    OperationResult,
+    ScrollDirection,
+    exit_code_for,
+)
+from lazyworker.interaction.settings import (
+    DEFAULT_CUSTOM_SNAPSHOT_TIMEOUT,
+    DEFAULT_SCROLL_DISTANCE,
+    DEFAULT_SCROLL_TO_MAX_SWIPES,
+    DEFAULT_SNAPSHOT_MAX_DEPTH,
+    SessionOptions,
+    SnapshotSettings,
+)
+from lazyworker.interaction.state import (
+    SessionState,
+    clear_session_state,
+    load_session_state,
+    save_session_state,
+)
 from lazyworker.wda.client import WdaClient
-from lazyworker.wda.errors import WdaError
+from lazyworker.wda.errors import WdaConnectionError, WdaError, WdaResponseError
 from lazyworker.wda.models import AccessibilityNode
+from lazyworker.wda.session import Session
 
 app = typer.Typer(
     add_completion=False,
     help="Agent-friendly iOS automation over WebDriverAgent.",
     no_args_is_help=True,
 )
+
+ui_app = typer.Typer(
+    no_args_is_help=True,
+    help="Agentic app interaction: open/close a session and act on the accessibility tree.",
+)
+app.add_typer(ui_app, name="ui")
 
 
 def _base_url(override: str | None) -> str:
@@ -129,6 +163,7 @@ def down(
 ) -> None:
     """Tear down the running WebDriverAgent instance."""
     state = BootstrapService.default().down(shutdown_simulator=shutdown_simulator)
+    clear_session_state(DEFAULT_STATE_DIR)
     if state is None:
         typer.echo("Nothing to tear down.")
     else:
@@ -217,3 +252,310 @@ def screenshot(
         _fail(str(exc))
     output.write_bytes(data)
     typer.echo(str(output))
+
+
+# --- ui sub-group: agentic interaction ---
+
+_Type = Annotated[str | None, typer.Option("--type", help="Element type, e.g. Button.")]
+_Label = Annotated[str | None, typer.Option("--label", help="Accessibility label.")]
+_Name = Annotated[str | None, typer.Option("--name", help="Accessibility name.")]
+_Value = Annotated[str | None, typer.Option("--value", help="Element value.")]
+_Identifier = Annotated[str | None, typer.Option("--identifier", help="Accessibility identifier.")]
+_Index = Annotated[int | None, typer.Option("--index", help="Pick the Nth match (0-based).")]
+_AnyVis = Annotated[bool, typer.Option("--any-visibility", help="Also match invisible elements.")]
+_At = Annotated[str | None, typer.Option("--at", help="Coordinate fallback, X,Y.")]
+_DryRun = Annotated[bool, typer.Option("--dry-run", help="Resolve and report without acting.")]
+_UiBaseUrl = Annotated[str | None, typer.Option("--base-url", help="WDA base URL.")]
+
+
+def _classify_wda(exc: WdaError) -> ErrorCode:
+    if isinstance(exc, WdaConnectionError):
+        return ErrorCode.WDA_UNREACHABLE
+    if isinstance(exc, WdaResponseError) and (
+        exc.status_code == 404 or "session" in str(exc).lower()
+    ):
+        return ErrorCode.SESSION_INVALID
+    return ErrorCode.WDA_ERROR
+
+
+def _emit(result: OperationResult) -> NoReturn:
+    typer.echo(result.model_dump_json(indent=2, exclude_none=True))
+    raise typer.Exit(code=0 if result.ok else exit_code_for(result.error_code))
+
+
+def _emit_report(report: BatchReport) -> NoReturn:
+    typer.echo(report.model_dump_json(indent=2, exclude_none=True))
+    if report.ok:
+        raise typer.Exit(code=0)
+    failure = next((result for result in report.results if not result.ok), None)
+    raise typer.Exit(code=exit_code_for(failure.error_code) if failure else 1)
+
+
+def _interactor(base_url: str | None) -> Interactor:
+    interactor = build_interactor(DEFAULT_STATE_DIR, base_url=base_url)
+    if interactor is None:
+        _emit(
+            OperationResult.failure(
+                Action.OPEN,
+                ErrorCode.NO_SESSION,
+                "no active session; run: lazyworker ui open <bundle-id>",
+            )
+        )
+    return interactor
+
+
+def _parse_at(action: Action, at: str | None) -> tuple[int, int] | None:
+    if at is None:
+        return None
+    parts = at.split(",")
+    try:
+        if len(parts) != 2:
+            raise ValueError
+        return int(parts[0]), int(parts[1])
+    except ValueError:
+        _emit(
+            OperationResult.failure(
+                action, ErrorCode.INVALID_TARGET, f"invalid --at '{at}', expected X,Y"
+            )
+        )
+
+
+def _locator(
+    type_: str | None,
+    label: str | None,
+    name: str | None,
+    value: str | None,
+    identifier: str | None,
+    index: int | None,
+    any_visibility: bool,
+) -> Locator | None:
+    if all(item is None for item in (type_, label, name, value, identifier)):
+        return None
+    return Locator(
+        type=type_,
+        label=label,
+        name=name,
+        value=value,
+        identifier=identifier,
+        index=index,
+        visible=None if any_visibility else True,
+    )
+
+
+@ui_app.command("open")
+def ui_open(
+    bundle_id: str = typer.Argument(..., help="App bundle id, e.g. com.apple.Preferences."),
+    snapshot_max_depth: int = typer.Option(DEFAULT_SNAPSHOT_MAX_DEPTH, "--snapshot-max-depth"),
+    snapshot_timeout: float = typer.Option(DEFAULT_CUSTOM_SNAPSHOT_TIMEOUT, "--snapshot-timeout"),
+    wait_for_quiescence: bool = typer.Option(
+        False, "--wait-for-quiescence/--no-wait-for-quiescence"
+    ),
+    reuse: bool = typer.Option(True, "--reuse/--no-reuse", help="Reuse a live session if present."),
+    base_url: _UiBaseUrl = None,
+) -> None:
+    """Open an app, create a tuned WDA session, and persist it."""
+    url = _base_url(base_url)
+    existing = load_session_state(DEFAULT_STATE_DIR)
+    if reuse and existing and existing.bundle_id == bundle_id and existing.base_url == url:
+        _emit(
+            OperationResult(
+                operation=Action.OPEN, ok=True, message=f"reused session {existing.session_id}"
+            )
+        )
+    options = SessionOptions(
+        wait_for_quiescence=wait_for_quiescence,
+        settings=SnapshotSettings(
+            snapshotMaxDepth=snapshot_max_depth, customSnapshotTimeout=snapshot_timeout
+        ),
+    )
+    try:
+        session = open_session(WdaClient(url), bundle_id, options)
+    except WdaError as exc:
+        _emit(OperationResult.failure(Action.OPEN, _classify_wda(exc), str(exc)))
+    save_session_state(
+        SessionState(session_id=session.id, bundle_id=bundle_id, base_url=url), DEFAULT_STATE_DIR
+    )
+    _emit(OperationResult(operation=Action.OPEN, ok=True, message=f"session {session.id}"))
+
+
+@ui_app.command("close")
+def ui_close(base_url: _UiBaseUrl = None) -> None:
+    """Close the active app session."""
+    state = load_session_state(DEFAULT_STATE_DIR)
+    if state is None:
+        _emit(OperationResult(operation=Action.CLOSE, ok=True, message="no active session"))
+    with contextlib.suppress(WdaError):
+        Session(WdaClient(base_url or state.base_url), state.session_id).delete()
+    clear_session_state(DEFAULT_STATE_DIR)
+    _emit(OperationResult(operation=Action.CLOSE, ok=True))
+
+
+@ui_app.command("tree")
+def ui_tree(base_url: _UiBaseUrl = None) -> None:
+    """Print the current accessibility tree (using the open session's settings)."""
+    interactor = _interactor(base_url)
+    try:
+        tree = interactor.snapshot()
+    except WdaError as exc:
+        _emit(OperationResult.failure(Action.TREE, _classify_wda(exc), str(exc)))
+    typer.echo(tree.model_dump_json(indent=2, exclude_none=True))
+
+
+@ui_app.command("tap")
+def ui_tap(
+    type_: _Type = None,
+    label: _Label = None,
+    name: _Name = None,
+    value: _Value = None,
+    identifier: _Identifier = None,
+    index: _Index = None,
+    any_visibility: _AnyVis = False,
+    at: _At = None,
+    dry_run: _DryRun = False,
+    base_url: _UiBaseUrl = None,
+) -> None:
+    """Tap an element (by selector) or a coordinate."""
+    interactor = _interactor(base_url)
+    point = _parse_at(Action.TAP, at)
+    locator = _locator(type_, label, name, value, identifier, index, any_visibility)
+    _emit(interactor.tap(locator, at=point, dry_run=dry_run))
+
+
+@ui_app.command("double-tap")
+def ui_double_tap(
+    type_: _Type = None,
+    label: _Label = None,
+    name: _Name = None,
+    value: _Value = None,
+    identifier: _Identifier = None,
+    index: _Index = None,
+    any_visibility: _AnyVis = False,
+    at: _At = None,
+    dry_run: _DryRun = False,
+    base_url: _UiBaseUrl = None,
+) -> None:
+    """Double-tap an element or a coordinate."""
+    interactor = _interactor(base_url)
+    point = _parse_at(Action.DOUBLE_TAP, at)
+    locator = _locator(type_, label, name, value, identifier, index, any_visibility)
+    _emit(interactor.double_tap(locator, at=point, dry_run=dry_run))
+
+
+@ui_app.command("long-press")
+def ui_long_press(
+    type_: _Type = None,
+    label: _Label = None,
+    name: _Name = None,
+    value: _Value = None,
+    identifier: _Identifier = None,
+    index: _Index = None,
+    any_visibility: _AnyVis = False,
+    at: _At = None,
+    duration: float = typer.Option(0.8, "--duration", help="Hold duration in seconds."),
+    dry_run: _DryRun = False,
+    base_url: _UiBaseUrl = None,
+) -> None:
+    """Long-press an element or a coordinate."""
+    interactor = _interactor(base_url)
+    point = _parse_at(Action.LONG_PRESS, at)
+    locator = _locator(type_, label, name, value, identifier, index, any_visibility)
+    _emit(interactor.long_press(locator, at=point, duration=duration, dry_run=dry_run))
+
+
+@ui_app.command("scroll")
+def ui_scroll(
+    direction: ScrollDirection = typer.Option(..., "--direction"),
+    distance: float = typer.Option(DEFAULT_SCROLL_DISTANCE, "--distance"),
+    dry_run: _DryRun = False,
+    base_url: _UiBaseUrl = None,
+) -> None:
+    """Scroll the screen in a direction."""
+    interactor = _interactor(base_url)
+    _emit(interactor.scroll(direction, amount=distance, dry_run=dry_run))
+
+
+@ui_app.command("scroll-to")
+def ui_scroll_to(
+    type_: _Type = None,
+    label: _Label = None,
+    name: _Name = None,
+    value: _Value = None,
+    identifier: _Identifier = None,
+    index: _Index = None,
+    any_visibility: _AnyVis = False,
+    direction: ScrollDirection = typer.Option(ScrollDirection.DOWN, "--direction"),
+    max_swipes: int = typer.Option(DEFAULT_SCROLL_TO_MAX_SWIPES, "--max-swipes"),
+    dry_run: _DryRun = False,
+    base_url: _UiBaseUrl = None,
+) -> None:
+    """Scroll until an element becomes visible."""
+    interactor = _interactor(base_url)
+    locator = _locator(type_, label, name, value, identifier, index, any_visibility)
+    if locator is None:
+        _emit(
+            OperationResult.failure(
+                Action.SCROLL_TO, ErrorCode.INVALID_TARGET, "scroll-to requires a selector"
+            )
+        )
+    _emit(
+        interactor.scroll_to(
+            locator, direction=direction, max_swipes=max_swipes, dry_run=dry_run
+        )
+    )
+
+
+@ui_app.command("type")
+def ui_type(
+    text: str = typer.Option(..., "--text", help="Text to type."),
+    type_: _Type = None,
+    label: _Label = None,
+    name: _Name = None,
+    value: _Value = None,
+    identifier: _Identifier = None,
+    index: _Index = None,
+    any_visibility: _AnyVis = False,
+    at: _At = None,
+    dry_run: _DryRun = False,
+    base_url: _UiBaseUrl = None,
+) -> None:
+    """Type text, optionally tapping a field first to focus it."""
+    interactor = _interactor(base_url)
+    point = _parse_at(Action.TYPE, at)
+    locator = _locator(type_, label, name, value, identifier, index, any_visibility)
+    _emit(interactor.type_text(text, locator=locator, at=point, dry_run=dry_run))
+
+
+@ui_app.command("screenshot")
+def ui_screenshot(
+    output: Path = typer.Option(Path("screenshot.png"), "--output", "-o"),
+    base_url: _UiBaseUrl = None,
+) -> None:
+    """Capture the current screen to a PNG using the active session."""
+    interactor = _interactor(base_url)
+    try:
+        data = interactor.screenshot()
+    except WdaError as exc:
+        _emit(OperationResult.failure(Action.SCREENSHOT, _classify_wda(exc), str(exc)))
+    output.write_bytes(data)
+    _emit(OperationResult(operation=Action.SCREENSHOT, ok=True, message=str(output)))
+
+
+@ui_app.command("batch")
+def ui_batch(
+    file: Path | None = typer.Option(None, "--file", help="JSON ops array; stdin if omitted."),
+    stop_on_error: bool = typer.Option(True, "--stop-on-error/--continue-on-error"),
+    base_url: _UiBaseUrl = None,
+) -> None:
+    """Run an ordered list of operations (JSON array via --file or stdin)."""
+    raw = file.read_text() if file is not None else sys.stdin.read()
+    try:
+        operations = json.loads(raw)
+    except ValueError as exc:
+        _emit(
+            OperationResult.failure(Action.OPEN, ErrorCode.INVALID_TARGET, f"invalid JSON: {exc}")
+        )
+    try:
+        batch = Batch.model_validate({"stop_on_error": stop_on_error, "operations": operations})
+    except ValidationError as exc:
+        _emit(OperationResult.failure(Action.OPEN, ErrorCode.INVALID_TARGET, str(exc)))
+    _emit_report(BatchRunner(_interactor(base_url)).run(batch))

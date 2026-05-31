@@ -144,10 +144,22 @@ Exploração  ──►  Robots (RobotPattern)  ──►  Assertion
 - [ ] Caminho USB (iproxy): sintaxe corrigida + testes unitários; falta validar ao vivo
       (pivotamos p/ rede a pedido). É só `lazyworker up` (sem --network) com cabo conectado.
 
+## Interface agêntica de interação (`lazyworker ui`) — CONCLUÍDA (validada e2e)
+- [x] Pacote `interaction/`: `OperationResult`/`ErrorCode`/`EXIT_CODES`, `Locator`+`LocatorResolver`
+      (reusa `find_all`), `SnapshotSettings`/`SessionOptions`, `SessionState` (persiste a sessão do
+      app em `~/.lazyworker/session.json`), `Interactor` (snapshot→resolve→gesto→status),
+      `BatchRunner` (union discriminada de ops).
+- [x] WDA: `create_session(wait_for_quiescence=False)`, `Session.apply_settings/double_tap/long_press`.
+- [x] CLI sub-grupo `ui`: open/close/tree/tap/double-tap/long-press/scroll/scroll-to/type/screenshot/batch.
+      Endereçamento por seletor (+`--index`) ou `--at`; `--dry-run`; saída JSON + exit codes determinísticos.
+- [x] Agregação: `ui batch` (JSON via stdin/arquivo), stop-on-error, status por operação.
+- [x] Heavy-app: sessão com quiescence off + snapshot settings (resolve o hang do WhatsApp/Chrome).
+- [x] E2e ao vivo (simulador): open tunado → tap (ambiguidade com candidatos → desambígua por --type) →
+      scroll → screenshot → batch (sucesso + stop-on-error) → close. 116 testes, ruff + mypy strict.
+
 ## Próximos passos
 - [ ] (Opcional) Validar o caminho USB+iproxy ao vivo.
-- [ ] Expor actions na CLI (tap/swipe/type) reusando o `RunState`/sessão ativa.
-- [ ] Iniciar **Fase 1 (Exploração)** sobre a base agora funcional (sim + device, rede).
+- [ ] Iniciar **Fase 1 (Exploração)** — agora a base de interação agêntica está pronta.
 - [ ] Expor actions na CLI com gestão de sessão (reusar `RunState` / sessão ativa).
 - [ ] Iniciar **Fase 1 (Exploração)** sobre a base agora funcional.
 - [ ] Fechar as 3 decisões de arquitetura das fases (exploração LLM, Robots código vs dados).

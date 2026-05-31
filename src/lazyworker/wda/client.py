@@ -108,13 +108,19 @@ class WdaClient:
         *,
         arguments: list[str] | None = None,
         environment: dict[str, str] | None = None,
+        wait_for_quiescence: bool = True,
     ) -> Session:
-        """Launch ``bundle_id`` and return an active automation session."""
+        """Launch ``bundle_id`` and return an active automation session.
+
+        ``wait_for_quiescence=False`` returns fast for heavy apps that never go idle.
+        """
         capabilities: dict[str, Any] = {"bundleId": bundle_id}
         if arguments is not None:
             capabilities["arguments"] = arguments
         if environment is not None:
             capabilities["environment"] = environment
+        if not wait_for_quiescence:
+            capabilities["shouldWaitForQuiescence"] = False
 
         body = self.request(
             "POST", "/session", json={"capabilities": {"alwaysMatch": capabilities}}

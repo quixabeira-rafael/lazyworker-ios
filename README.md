@@ -59,6 +59,42 @@ lazyworker up --network           # Wi-Fi: reaches WDA at its advertised LAN URL
 
 After `up`, the read commands auto-target the active WDA via the saved run state.
 
+## Agentic interaction (`lazyworker ui`)
+
+An agent opens an app (which creates a tuned session that survives across CLI calls), then acts
+on the accessibility tree. Elements are addressed by **selector** (`--label/--type/--name/
+--value/--identifier`, with `--index` to disambiguate) or by **coordinate** (`--at X,Y`). Every
+action prints an `OperationResult` JSON to stdout and exits with a deterministic code (0 on
+success; e.g. 20 not-found, 21 ambiguous, 10 no-session) so an agent can branch on `$?`.
+
+```bash
+lazyworker ui open com.apple.Preferences      # create + tune a session
+lazyworker ui tree                            # accessibility tree (session-tuned snapshot)
+lazyworker ui tap --label General --type Button
+lazyworker ui scroll --direction down
+lazyworker ui scroll-to --label "Battery"
+lazyworker ui type --text "hello" --label "Search"
+lazyworker ui screenshot -o screen.png
+lazyworker ui close
+```
+
+Ambiguity is returned as data, not a blind error:
+
+```json
+{ "operation": "tap", "ok": false, "error_code": "ambiguous",
+  "candidate_count": 2, "candidates": [ { "type": "Button", ... }, { "type": "StaticText", ... } ] }
+```
+
+Add `--dry-run` to resolve and report the target without acting.
+
+**Aggregate operations** — pipe an ordered JSON array of ops (stop-on-error by default):
+
+```bash
+echo '[{"op":"tap","label":"Search"},
+       {"op":"type","text":"joilane"},
+       {"op":"tap","label":"joilane","type":"Cell"}]' | lazyworker ui batch
+```
+
 ## Configuration (`lazyworker.toml`)
 
 ```toml
@@ -86,8 +122,11 @@ with WdaClient("http://127.0.0.1:8100") as client:
     session.type_text("hello")
 ```
 
-Session actions: `source`, `screenshot`, `tap`, `swipe`, `type_text`, `deep_link`,
-`terminate`, `delete`. The accessibility tree supports `walk`, `find`, and `find_all`.
+Session actions: `source`, `screenshot`, `tap`, `double_tap`, `long_press`, `swipe`,
+`type_text`, `apply_settings`, `deep_link`, `terminate`, `delete`. The accessibility tree
+supports `walk`, `find`, and `find_all`. The `lazyworker.interaction` package adds the
+agentic layer: `Interactor` (selector-resolving actions returning `OperationResult`),
+`Locator`, and `BatchRunner`.
 
 ## Development
 

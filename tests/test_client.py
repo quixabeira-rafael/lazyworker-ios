@@ -81,6 +81,50 @@ def test_tap_sends_w3c_pointer_actions(httpx_mock: HTTPXMock) -> None:
     assert b'"y":240' in payload
 
 
+def test_create_session_can_disable_quiescence(httpx_mock: HTTPXMock) -> None:
+    httpx_mock.add_response(
+        url=f"{BASE_URL}/session", method="POST", json={"sessionId": "S1", "value": {}}
+    )
+    WdaClient(BASE_URL).create_session("com.example.app", wait_for_quiescence=False)
+    body = httpx_mock.get_requests()[0].content
+    assert b'"shouldWaitForQuiescence":false' in body.replace(b" ", b"")
+
+
+def test_create_session_keeps_quiescence_by_default(httpx_mock: HTTPXMock) -> None:
+    httpx_mock.add_response(
+        url=f"{BASE_URL}/session", method="POST", json={"sessionId": "S1", "value": {}}
+    )
+    WdaClient(BASE_URL).create_session("com.example.app")
+    assert b"shouldWaitForQuiescence" not in httpx_mock.get_requests()[0].content
+
+
+def test_apply_settings(httpx_mock: HTTPXMock) -> None:
+    httpx_mock.add_response(
+        url=f"{BASE_URL}/session/S1/appium/settings", method="POST", json={"value": {}}
+    )
+    Session(WdaClient(BASE_URL), "S1").apply_settings({"snapshotMaxDepth": 30})
+    payload = httpx_mock.get_requests()[0].content.replace(b" ", b"")
+    assert b'"settings":{"snapshotMaxDepth":30}' in payload
+
+
+def test_double_tap_sends_two_taps(httpx_mock: HTTPXMock) -> None:
+    httpx_mock.add_response(
+        url=f"{BASE_URL}/session/S1/actions", method="POST", json={"value": None}
+    )
+    Session(WdaClient(BASE_URL), "S1").double_tap(10, 20)
+    payload = httpx_mock.get_requests()[0].content
+    assert payload.count(b'"pointerDown"') == 2
+
+
+def test_long_press_holds(httpx_mock: HTTPXMock) -> None:
+    httpx_mock.add_response(
+        url=f"{BASE_URL}/session/S1/actions", method="POST", json={"value": None}
+    )
+    Session(WdaClient(BASE_URL), "S1").long_press(10, 20, duration=1.0)
+    payload = httpx_mock.get_requests()[0].content.replace(b" ", b"")
+    assert b'"pause","duration":1000' in payload
+
+
 def test_type_text_sends_keys(httpx_mock: HTTPXMock) -> None:
     httpx_mock.add_response(
         url=f"{BASE_URL}/session/S1/wda/keys",

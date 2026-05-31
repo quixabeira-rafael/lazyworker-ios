@@ -11,6 +11,8 @@ if TYPE_CHECKING:
     from lazyworker.wda.client import WdaClient
 
 TAP_HOLD_MS = 100
+DOUBLE_TAP_GAP_MS = 120
+LONG_PRESS_SECONDS = 0.8
 
 
 class Session:
@@ -41,6 +43,36 @@ class Session:
                 {"type": "pause", "duration": TAP_HOLD_MS},
                 {"type": "pointerUp", "button": 0},
             ]
+        )
+
+    def double_tap(self, x: int, y: int, *, gap_ms: int = DOUBLE_TAP_GAP_MS) -> None:
+        self._perform_pointer(
+            [
+                {"type": "pointerMove", "duration": 0, "x": x, "y": y},
+                {"type": "pointerDown", "button": 0},
+                {"type": "pause", "duration": TAP_HOLD_MS},
+                {"type": "pointerUp", "button": 0},
+                {"type": "pause", "duration": gap_ms},
+                {"type": "pointerDown", "button": 0},
+                {"type": "pause", "duration": TAP_HOLD_MS},
+                {"type": "pointerUp", "button": 0},
+            ]
+        )
+
+    def long_press(self, x: int, y: int, *, duration: float = LONG_PRESS_SECONDS) -> None:
+        self._perform_pointer(
+            [
+                {"type": "pointerMove", "duration": 0, "x": x, "y": y},
+                {"type": "pointerDown", "button": 0},
+                {"type": "pause", "duration": int(duration * 1000)},
+                {"type": "pointerUp", "button": 0},
+            ]
+        )
+
+    def apply_settings(self, settings: dict[str, Any]) -> None:
+        """Apply WDA session settings (e.g. snapshot depth/timeout)."""
+        self._client.request(
+            "POST", f"/session/{self.id}/appium/settings", json={"settings": settings}
         )
 
     def swipe(
