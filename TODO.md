@@ -157,9 +157,22 @@ Exploração  ──►  Robots (RobotPattern)  ──►  Assertion
 - [x] E2e ao vivo (simulador): open tunado → tap (ambiguidade com candidatos → desambígua por --type) →
       scroll → screenshot → batch (sucesso + stop-on-error) → close. 116 testes, ruff + mypy strict.
 
+## App-laboratório SwiftUI + base e2e (`lab/`, `tests/e2e/`) — CONCLUÍDO
+- [x] `lab/`: app SwiftUI mínimo, `.xcodeproj` escrito à mão (grupo sincronizado, sem dependência
+      extra), bundle `com.lazyworker.lab`, iOS 16. Um único `event-log` (StaticText com
+      `accessibilityIdentifier`) como fonte de verdade; string canônica por evento.
+- [x] Labs cobrindo cada evento: tap, double-tap, long-press, toggle, type (+clear+secure),
+      scroll, scroll-to (lista longa), screenshot, ambiguidade (botões gêmeos), combined + batch flow.
+- [x] `tests/e2e/`: harness opt-in (LAZYWORKER_E2E=1) dirigindo o lab via CLI, asserções lendo o
+      `event-log`. 12 casos, **todos passando ao vivo no simulador**.
+- Achados (corrigidos no lab): tocar o centro de um `Toggle` cai no label → usar `labelsHidden`
+  pro centro ser o switch; `onChange` sobrescrevia o evento de clear → unificado no `onChange`.
+- Build: `xcodebuild -target ... CONFIGURATION_BUILD_DIR=...` (sem scheme); install via `simctl`.
+
 ## Próximos passos
 - [ ] (Opcional) Validar o caminho USB+iproxy ao vivo.
-- [ ] Iniciar **Fase 1 (Exploração)** — agora a base de interação agêntica está pronta.
+- [ ] (Opcional) Validar o lab + e2e em device físico.
+- [ ] Iniciar **Fase 1 (Exploração)** — base de interação agêntica + lab de validação prontos.
 - [ ] Expor actions na CLI com gestão de sessão (reusar `RunState` / sessão ativa).
 - [ ] Iniciar **Fase 1 (Exploração)** sobre a base agora funcional.
 - [ ] Fechar as 3 decisões de arquitetura das fases (exploração LLM, Robots código vs dados).
