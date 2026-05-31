@@ -1,18 +1,43 @@
 # lazyworker
 
-Agent-friendly iOS automation over [WebDriverAgent](https://github.com/appium/WebDriverAgent)
-(WDA) for **simulators and real devices**. It drives **production apps** — no source code,
-and no Xcode integration at runtime (Xcode is only needed once, to build/sign WDA).
+**Agent-first iOS automation over [WebDriverAgent](https://github.com/appium/WebDriverAgent).**
 
-`lazyworker` exposes a small typed Python library and a CLI designed to be consumed by an
-autonomous agent: structured (JSON) output, descriptive help, and clear, actionable errors.
+`lazyworker` drives iOS **production apps** — on simulators and real devices — by reading their
+accessibility state and acting on it. It needs **no app source code** and **no Xcode integration
+at runtime** (Xcode is used only once, to build/sign WebDriverAgent).
+
+It is designed to be driven by an **autonomous agent**, not only by a human at a keyboard. Every
+command is a small, composable building block with machine-friendly behaviour:
+
+- **Structured output** — every command prints JSON to stdout.
+- **Deterministic exit codes** — branch on `$?` without parsing the output (`0` ok, `20` not
+  found, `21` ambiguous, `10` no session, …).
+- **Errors are data** — an ambiguous selector returns the candidate elements; a failed wait
+  returns a screenshot path. Failures are inspectable, not opaque.
+- **Self-describing** — rich `--help` on every command and flag, so an agent can discover what is
+  possible at runtime.
+- **Observe → act → verify** — read the tree/screen, act by selector or coordinate, and require a
+  *verified* change via a built-in smart wait.
+
+## How it works
+
+```
+agent / script
+      │  CLI (JSON in, JSON out, exit codes)
+      ▼
+  lazyworker ──HTTP──► WebDriverAgent ──► XCUITest ──► iOS app (simulator or device)
+```
+
+`lazyworker` talks raw HTTP to a WebDriverAgent runner, which uses Apple's XCUITest to read the
+accessibility tree and synthesize real touches/gestures. You build WDA once with `bootstrap`,
+start it with `up`, and then observe and act.
 
 ## Requirements
 
 - macOS with Xcode (used once by `bootstrap` to build/sign WebDriverAgent).
 - Python >= 3.11.
-- For real devices: an Apple ID signed into Xcode (free or paid), Developer Mode enabled on
-  the device, and `iproxy` (`brew install libimobiledevice`) for the USB connection path.
+- For real devices: an Apple ID signed into Xcode (free or paid), Developer Mode enabled on the
+  device, and `iproxy` (`brew install libimobiledevice`) for the USB connection path.
 
 ## Install
 
@@ -22,18 +47,30 @@ pipx install .          # global, isolated CLI available on your PATH
 make install            # pipx install -e . using the project's Python (3.11+)
 ```
 
-Make sure `~/.local/bin` is on your PATH (`pipx ensurepath`). After that, `lazyworker`
-works from any directory — including inside the app repo you want to drive.
+Make sure `~/.local/bin` is on your PATH (`pipx ensurepath`). After that, `lazyworker` works from
+any directory — including inside the app repo you want to drive.
+
+Optional extras enable extra screen-understanding backends:
+
+```bash
+pipx install '.[ocr]'      # Apple Vision OCR for `ui screen --ocr`
+pipx install '.[detect]'   # local visual UI detector for `ui screen --detect`
+```
 
 ## Quick start (simulator)
 
 ```bash
-lazyworker doctor       # preflight: what's ready and what to fix
-lazyworker bootstrap    # build WebDriverAgent for the simulator (run once)
-lazyworker up           # boot a simulator, launch WDA, wait until ready
-lazyworker source       # accessibility tree as JSON (targets the active WDA)
-lazyworker screenshot -o screen.png
-lazyworker down         # stop WDA
+lazyworker doctor                         # preflight: what's ready, what to fix
+lazyworker bootstrap                      # build WebDriverAgent for the simulator (run once)
+lazyworker up                             # boot a simulator, launch WDA, wait until ready
+
+lazyworker ui open com.apple.Preferences  # open an app, create a session
+lazyworker ui tap --label General --type Button
+lazyworker ui scroll --direction down
+lazyworker ui screen -o screen.png        # JSON breakdown of what's on screen
+lazyworker ui close
+
+lazyworker down                           # stop WDA
 ```
 
 ## Real device
@@ -50,80 +87,116 @@ lazyworker up --network           # Wi-Fi: reaches WDA at its advertised LAN URL
 `lazyworker doctor` lists the Team IDs signed into Xcode (free ones flagged) so you can fill in
 `signing.team_id`.
 
-## CLI
+## Commands
+
+### Top-level
 
 | Command | Purpose |
 |---|---|
-| `doctor` | Environment/device preflight; reports required actions; `--json` for machines. |
-| `devices` | List simulators and physical devices (USB/network) as JSON. |
-| `bootstrap` | Fetch and build WDA (simulator, or signed for device per config). |
-| `up` / `down` | Launch / tear down WDA on a simulator or device; persists run state. |
-| `status` | WDA status as JSON. |
+| `bootstrap` | Fetch and build WebDriverAgent (simulator, or signed for device per config). Run once. |
+| `up` | Boot/target a simulator or device, launch WDA, wait until ready; persists run state. |
+| `down` | Tear down the running WDA instance (`--shutdown-simulator` to also stop the sim). |
+| `status` | WebDriverAgent status as JSON. |
 | `source` | Current accessibility tree as JSON. |
-| `screenshot` | Capture the screen to a PNG. |
+| `screenshot` | Capture the current screen to a PNG (`-o PATH`). |
+| `devices` | List simulators and physical devices (USB/network) as JSON; filters: `--kind/--connection/--booted`. |
+| `doctor` | Environment/device preflight; reports the actions needed to automate (`--json` for machines). |
+| `ui` | Agentic interaction subgroup — open a session and act on the tree (see below). |
 
-After `up`, the read commands auto-target the active WDA via the saved run state.
+After `up`, the read commands (`status`, `source`, `screenshot`) automatically target the active
+WDA via the saved run state.
 
-## Agentic interaction (`lazyworker ui`)
+### Agentic interaction (`ui`)
 
-An agent opens an app (which creates a tuned session that survives across CLI calls), then acts
-on the accessibility tree. Elements are addressed by **selector** (`--label/--type/--name/
---value/--identifier`, with `--index` to disambiguate) or by **coordinate** (`--at X,Y`). Every
-action prints an `OperationResult` JSON to stdout and exits with a deterministic code (0 on
-success; e.g. 20 not-found, 21 ambiguous, 10 no-session) so an agent can branch on `$?`.
+An agent opens an app — which creates a tuned session that survives across CLI calls — then
+observes and acts. Every action prints an `OperationResult` JSON and exits with a deterministic
+code so an agent can branch on `$?`.
 
-```bash
-lazyworker ui open com.apple.Preferences      # create + tune a session
-lazyworker ui tree                            # accessibility tree (session-tuned snapshot)
-lazyworker ui tap --label General --type Button
-lazyworker ui scroll --direction down
-lazyworker ui scroll-to --label "Battery"
-lazyworker ui type --text "hello" --label "Search"
-lazyworker ui screenshot -o screen.png
-lazyworker ui close
-```
+| Command | Purpose |
+|---|---|
+| `ui open BUNDLE_ID` | Open an app, create a tuned session, and persist it (`--reuse/--no-reuse`, `--snapshot-max-depth`, `--snapshot-timeout`, `--wait-for-quiescence`). |
+| `ui close` | Close the active app session. |
+| `ui tree` | Print the current accessibility tree (session-tuned snapshot). |
+| `ui tap` | Tap an element (by selector) or a coordinate. |
+| `ui double-tap` | Double-tap an element or a coordinate. |
+| `ui long-press` | Long-press an element or a coordinate (`--duration`). |
+| `ui scroll` | Scroll the screen in a direction (`--direction`, `--distance`). |
+| `ui scroll-to` | Scroll until an element becomes visible (`--direction`, `--max-swipes`). |
+| `ui type` | Type text (`--text`), optionally tapping a field first to focus it. |
+| `ui deeplink URL` | Open a deep/universal link via the active session. |
+| `ui screenshot` | Capture the current screen to a PNG (`-o PATH`). |
+| `ui screen` | Emit a textual breakdown of the screen as JSON (`--ocr`, `--detect`, `-o PATH`). |
+| `ui batch` | Run an ordered JSON list of operations (`--file` or stdin; `--stop-on-error/--continue-on-error`). |
+
+**Addressing.** Every action targets an element by **selector** or a raw **coordinate**:
+
+- Selectors: `--type`, `--label`, `--name`, `--value`, `--identifier`, with `--index` to pick one
+  of several matches and `--any-visibility` to include hidden elements.
+- Coordinate: `--at X,Y` (a real touch — it hits the view via hit-testing, even for elements that
+  are not in the accessibility tree).
+- `--dry-run` resolves and reports the target/point without acting.
 
 Ambiguity is returned as data, not a blind error:
 
 ```json
-{ "operation": "tap", "ok": false, "error_code": "ambiguous",
-  "candidate_count": 2, "candidates": [ { "type": "Button", ... }, { "type": "StaticText", ... } ] }
+{ "operation": "tap", "ok": false, "error_code": "ambiguous", "candidate_count": 2,
+  "candidates": [ { "type": "Button", "label": "Save" }, { "type": "StaticText", "label": "Save" } ] }
 ```
 
-Add `--dry-run` to resolve and report the target without acting.
+**Smart wait.** Append a wait to any action and the result is only `ok` once a *verified* change
+settles — otherwise it fails with `no_change` (exit `25`):
 
-**Screen breakdown** — `lazyworker ui screen` turns the current screen into agent-consumable
-text: the screenshot path, the screen box, and a flat list of elements (each a box with
-`box=[x,y,w,h]`, `size`, text, role, and a `container` grouping hint), in reading order.
+- `--wait tree` — wait for a structural change in the accessibility tree.
+- `--wait screen` — wait for a pixel change in a screenshot diff.
+- `--wait-until key=value` / `--wait-gone key=value` — wait until a selector appears / disappears
+  (keys: `type|label|name|value|identifier|id`, e.g. `--wait-until id=spinner`).
+- Tune with `--wait-timeout`, `--wait-settle` (stable polls required), `--wait-interval`.
+- On a failed wait, a screenshot of the final state is saved and its path is attached to the
+  result (`--no-wait-shot` to disable).
+
+```bash
+lazyworker ui tap --identifier submit --wait-until "id=home"
+lazyworker ui tap --label Refresh --wait screen
+```
+
+**Exit codes.** `0` ok, `10` no_session, `11` wda_unreachable, `12` session_invalid,
+`13` wda_error, `20` not_found, `21` ambiguous, `22` not_visible, `23` out_of_bounds, `24` timeout,
+`25` no_change, `30` invalid_target, `31` ocr_unavailable, `32` detector_unavailable, `1` internal.
+
+### Screen understanding (`ui screen`)
+
+`ui screen` turns the current screen into agent-consumable text: the screenshot path, the screen
+box, and a flat list of elements (each a box with `box=[x,y,w,h]`, `size`, text, role, and a
+`container` grouping hint), in reading order.
 
 ```json
-{ "screenshot": "~/.lazyworker/screens/screen-….png", "width": 402, "height": 874,
+{ "screenshot": "…/screen-….png", "width": 402, "height": 874,
   "elements": [
     { "role": "Other", "identifier": "card-1", "box": [16,163,370,89] },
     { "role": "StaticText", "text": "Saldo", "box": [32,179,32,15], "container": "card-1" },
     { "role": "StaticText", "text": "R$ 1.234,56", "box": [32,202,151,34], "container": "card-1" } ] }
 ```
 
-Add `--ocr` to also run Apple Vision OCR on the screenshot (`pip install 'lazyworker[ocr]'`).
-This recovers text that is **not** in the accessibility tree — drawn text, images, custom views —
-as `{text, box:[x,y,w,h], size, confidence}`, in the same screen-point coordinates as the tree.
-A component outside the tree can then be acted on by coordinate: OCR gives the box, and
-`lazyworker ui tap --at <cx>,<cy>` taps its center (a real touch hits the view via hit-testing,
-regardless of accessibility).
+- `--ocr` also runs **Apple Vision** OCR (`pip install 'lazyworker[ocr]'`), recovering text that is
+  **not** in the accessibility tree — drawn text, images, custom views — as
+  `{text, box, size, confidence}` in the same screen-point coordinates. A component outside the
+  tree can then be tapped by coordinate: OCR gives the box, `ui tap --at <cx>,<cy>` taps its centre.
+- `--detect` also runs a **local visual UI detector** (OmniParser; `pip install 'lazyworker[detect]'`),
+  finding icons/buttons/regions from pixels as `{label, box, size, confidence, container}`. It is
+  heavy (downloads model weights, loads PyTorch) — use it for exploration, not per-action.
 
-Add `--detect` to also run a local visual UI detector — OmniParser (YOLO icon detection +
-Florence-2 captioning), `pip install 'lazyworker[detect]'`, on-device. It finds icons/buttons/
-regions from pixels (even ones absent from the tree) as `{label, box, size, confidence, container}`,
-where `container` is the smallest tree element whose frame contains the detection. The detector is
-heavy (downloads model weights, loads PyTorch); use it for exploration, not per-action.
+### Aggregate operations (`ui batch`)
 
-**Aggregate operations** — pipe an ordered JSON array of ops (stop-on-error by default):
+Pipe an ordered JSON array of ops (stop-on-error by default) to run a whole flow in one call:
 
 ```bash
 echo '[{"op":"tap","label":"Search"},
        {"op":"type","text":"joilane"},
        {"op":"tap","label":"joilane","type":"Cell"}]' | lazyworker ui batch
 ```
+
+The report contains a per-operation `OperationResult` array and exits with the first failure's
+code.
 
 ## Configuration (`lazyworker.toml`)
 
@@ -135,7 +208,7 @@ bundle_id_prefix = "com.example.wda"
 
 [target]
 udid = "…"               # the simulator/device this repo drives (so you can omit --udid)
-# bundle_id = "com.example.app"   # the app under test (informational)
+# bundle_id = "com.example.app"
 
 [wda]
 base_url = "http://127.0.0.1:8100"
@@ -147,10 +220,11 @@ port = 8100              # give each project a distinct port to run several WDAs
 repo/worktree pins its own target and port**. Runtime state (the active WDA, the `ui` session,
 screenshots) lives per-project under `<repo>/.lazyworker/` (gitignore it), while the shared WDA
 build stays global under `~/.lazyworker/`. This lets you drive **different simulators from
-different repos at the same time** — give each its own `[target] udid` and `[wda] port`
-(e.g. `8100`, `8101`), and `lazyworker up`/`ui`/`down` in each repo stay fully isolated.
+different repos at the same time** — give each its own `[target] udid` and `[wda] port`.
 
 ## Library
+
+The CLI is a thin layer over a typed Python library, usable directly:
 
 ```python
 from lazyworker import WdaClient
@@ -163,11 +237,10 @@ with WdaClient("http://127.0.0.1:8100") as client:
     session.type_text("hello")
 ```
 
-Session actions: `source`, `screenshot`, `tap`, `double_tap`, `long_press`, `swipe`,
-`type_text`, `apply_settings`, `deep_link`, `terminate`, `delete`. The accessibility tree
-supports `walk`, `find`, and `find_all`. The `lazyworker.interaction` package adds the
-agentic layer: `Interactor` (selector-resolving actions returning `OperationResult`),
-`Locator`, and `BatchRunner`.
+Session actions: `source`, `screenshot`, `tap`, `double_tap`, `long_press`, `swipe`, `type_text`,
+`apply_settings`, `deep_link`, `terminate`, `delete`. The accessibility tree supports `walk`,
+`find`, and `find_all`. The `lazyworker.interaction` package adds the agentic layer: `Interactor`
+(selector-resolving actions returning `OperationResult`), `Locator`, and `BatchRunner`.
 
 ## Development
 
