@@ -1,6 +1,11 @@
 from __future__ import annotations
 
+from lazyworker.interaction.models import Tip
 from lazyworker.wda.models import AccessibilityNode
+
+TEXT_INPUT = {"TextField", "SecureTextField", "SearchField", "TextView"}
+SCROLLABLE = {"ScrollView", "Table", "CollectionView", "WebView"}
+NON_ACTIONABLE = {"Application", "Window"}
 
 
 def search_tree(
@@ -48,3 +53,55 @@ def search_tree(
         if limit is not None and len(results) >= limit:
             break
     return results
+
+
+def _quote(text: str) -> str:
+    return '"' + text.replace('"', '\\"') + '"'
+
+
+def _at(node: AccessibilityNode) -> str | None:
+    if node.rect is None:
+        return None
+    cx, cy = node.rect.center
+    return f"--at {cx},{cy}"
+
+
+def _selector(node: AccessibilityNode) -> str | None:
+    """Best single addressing for a copy-paste command: identifier > label+type > coordinate."""
+    if node.identifier:
+        return f"--identifier {_quote(node.identifier)}"
+    if node.label:
+        return f"--label {_quote(node.label)} --type {node.type}"
+    return _at(node)
+
+
+def tips_for(node: AccessibilityNode) -> list[Tip]:
+    """Ready-to-copy example commands tailored to an element's role.
+
+    Tappables get a ``tap``, text inputs a ``type``, scrollables ``scroll``/``scroll-to``. For
+    tap/type, the primary command uses the best selector and an unambiguous ``--at`` variant is
+    added when the element has a frame.
+    """
+    if node.type in NON_ACTIONABLE:
+        return []
+    if node.type in SCROLLABLE:
+        return [
+            Tip(action="scroll", command="lazyworker ui scroll --direction down"),
+            Tip(action="scroll", command="lazyworker ui scroll --direction up"),
+            Tip(action="scroll-to", command='lazyworker ui scroll-to --label "<target>"'),
+        ]
+    selector = _selector(node)
+    if selector is None:
+        return []
+    action = "type" if node.type in TEXT_INPUT else "tap"
+
+    def command(addressing: str) -> str:
+        if action == "type":
+            return f'lazyworker ui type --text "<text>" {addressing}'
+        return f"lazyworker ui tap {addressing}"
+
+    tips = [Tip(action=action, command=command(selector))]
+    at = _at(node)
+    if at is not None and not selector.startswith("--at"):
+        tips.append(Tip(action=action, command=command(at)))
+    return tips

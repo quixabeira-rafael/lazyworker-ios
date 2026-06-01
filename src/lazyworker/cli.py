@@ -27,6 +27,7 @@ from lazyworker.interaction.locator import Locator
 from lazyworker.interaction.models import (
     Action,
     ErrorCode,
+    FoundElement,
     MatchedElement,
     OperationResult,
     ScrollDirection,
@@ -36,7 +37,7 @@ from lazyworker.interaction.models import (
 )
 from lazyworker.interaction.ocr import OcrUnavailable, recognize
 from lazyworker.interaction.screen import describe_screen
-from lazyworker.interaction.search import search_tree
+from lazyworker.interaction.search import search_tree, tips_for
 from lazyworker.interaction.settings import (
     DEFAULT_CUSTOM_SNAPSHOT_TIMEOUT,
     DEFAULT_SCROLL_DISTANCE,
@@ -601,6 +602,9 @@ def ui_find(
     identifier: _Identifier = None,
     any_visibility: _AnyVis = False,
     limit: int = typer.Option(0, "--limit", help="Max matches to return (0 = no limit)."),
+    tips: bool = typer.Option(
+        True, "--tips/--no-tips", help="Include ready-to-copy example commands per result."
+    ),
     base_url: _UiBaseUrl = None,
 ) -> None:
     """Search the accessibility tree and return every matching element (read-only)."""
@@ -626,9 +630,14 @@ def ui_find(
         include_hidden=any_visibility,
         limit=limit or None,
     )
-    result = SearchResult(
-        count=len(matches), matches=[MatchedElement.from_node(node) for node in matches]
-    )
+    found = [
+        FoundElement(
+            **MatchedElement.from_node(node).model_dump(),
+            tips=tips_for(node) if tips else [],
+        )
+        for node in matches
+    ]
+    result = SearchResult(count=len(found), matches=found)
     typer.echo(result.model_dump_json(indent=2, exclude_none=True))
 
 

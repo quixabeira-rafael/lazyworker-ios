@@ -358,3 +358,27 @@ def test_ui_find_requires_criteria(
     result = runner.invoke(app, ["ui", "find"])
     assert result.exit_code == 30
     assert '"invalid_target"' in result.stdout
+
+
+def test_ui_find_includes_tips_by_default(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path, httpx_mock: HTTPXMock
+) -> None:
+    _use_state_dir(monkeypatch, tmp_path)
+    _seed_session(tmp_path)
+    httpx_mock.add_response(url=f"{BASE}/source?format=json", json=_tree([BUTTON]))
+    result = runner.invoke(app, ["ui", "find", "-q", "Login"])
+    assert result.exit_code == 0
+    tips = json.loads(result.stdout)["matches"][0]["tips"]
+    assert tips and tips[0]["action"] == "tap"
+    assert "lazyworker ui tap" in tips[0]["command"]
+
+
+def test_ui_find_no_tips_flag(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path, httpx_mock: HTTPXMock
+) -> None:
+    _use_state_dir(monkeypatch, tmp_path)
+    _seed_session(tmp_path)
+    httpx_mock.add_response(url=f"{BASE}/source?format=json", json=_tree([BUTTON]))
+    result = runner.invoke(app, ["ui", "find", "-q", "Login", "--no-tips"])
+    assert result.exit_code == 0
+    assert json.loads(result.stdout)["matches"][0]["tips"] == []

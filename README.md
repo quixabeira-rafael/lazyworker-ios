@@ -153,6 +153,18 @@ lazyworker ui find -q "joilane" --type Cell   # type as an extra filter
 lazyworker ui find --identifier btn-primary   # exact field match
 ```
 
+Each match carries **tips** — ready-to-copy commands tailored to the element (a `Button` → a
+`tap`, a `TextField` → a `type`, a `ScrollView` → `scroll`/`scroll-to`), using the best selector
+plus an unambiguous `--at` fallback. Use `--no-tips` for lean output.
+
+```json
+{ "count": 1, "matches": [
+  { "type": "Button", "label": "Primary", "identifier": "btn-primary", "rect": {…}, "visible": true,
+    "tips": [
+      { "action": "tap", "command": "lazyworker ui tap --identifier \"btn-primary\"" },
+      { "action": "tap", "command": "lazyworker ui tap --at 206,142" } ] } ] }
+```
+
 **Smart wait.** Append a wait to any action and the result is only `ok` once a *verified* change
 settles — otherwise it fails with `no_change` (exit `25`):
 

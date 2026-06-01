@@ -1,6 +1,6 @@
 from typing import Any
 
-from lazyworker.interaction.search import search_tree
+from lazyworker.interaction.search import search_tree, tips_for
 from lazyworker.wda.models import AccessibilityNode
 
 
@@ -50,3 +50,51 @@ def test_excludes_hidden_by_default() -> None:
 def test_limit_caps_results() -> None:
     matches = search_tree(_tree([_CELL_A, _BTN]), query="joilane", limit=1)
     assert len(matches) == 1
+
+
+# --- tips_for ---
+
+_RECT = {"x": 0, "y": 0, "width": 100, "height": 40}
+
+
+def _node(type_: str, **kw: Any) -> AccessibilityNode:
+    return AccessibilityNode.model_validate({"type": type_, "isVisible": True, **kw})
+
+
+def test_tips_button_by_identifier_plus_at_fallback() -> None:
+    tips = tips_for(_node("Button", identifier="btn-primary", rect=_RECT))
+    assert [t.action for t in tips] == ["tap", "tap"]
+    assert tips[0].command == 'lazyworker ui tap --identifier "btn-primary"'
+    assert tips[1].command == "lazyworker ui tap --at 50,20"
+
+
+def test_tips_button_by_label_type_plus_at() -> None:
+    tips = tips_for(_node("Button", label="Save", rect=_RECT))
+    assert tips[0].command == 'lazyworker ui tap --label "Save" --type Button'
+    assert tips[1].command == "lazyworker ui tap --at 50,20"
+
+
+def test_tips_text_input_is_type() -> None:
+    tips = tips_for(_node("TextField", identifier="email", rect=_RECT))
+    assert tips[0].action == "type"
+    assert tips[0].command == 'lazyworker ui type --text "<text>" --identifier "email"'
+
+
+def test_tips_scrollable() -> None:
+    tips = tips_for(_node("ScrollView", rect=_RECT))
+    assert [t.action for t in tips] == ["scroll", "scroll", "scroll-to"]
+    assert "--direction down" in tips[0].command
+
+
+def test_tips_coordinate_only_single() -> None:
+    tips = tips_for(_node("Image", rect=_RECT))
+    assert len(tips) == 1
+    assert tips[0].command == "lazyworker ui tap --at 50,20"
+
+
+def test_tips_non_actionable_root_is_empty() -> None:
+    assert tips_for(_node("Application", rect=_RECT)) == []
+
+
+def test_tips_without_addressing_is_empty() -> None:
+    assert tips_for(_node("Button")) == []

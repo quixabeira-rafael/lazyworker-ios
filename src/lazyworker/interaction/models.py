@@ -115,11 +115,24 @@ class MatchedElement(BaseModel):
         )
 
 
+class Tip(BaseModel):
+    """A ready-to-copy example command for acting on a found element."""
+
+    action: str
+    command: str
+
+
+class FoundElement(MatchedElement):
+    """A search match, plus tips on how to act on it (search-only — keeps MatchedElement clean)."""
+
+    tips: list[Tip] = []
+
+
 class SearchResult(BaseModel):
     """Read-only result of a tree search: every element matching the query/filters."""
 
     count: int
-    matches: list[MatchedElement]
+    matches: list[FoundElement]
 
 
 class OperationResult(BaseModel):
