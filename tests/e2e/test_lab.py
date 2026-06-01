@@ -21,6 +21,32 @@ def test_tap_by_label_and_type(lab: None) -> None:
     assert event_log() == "tap:btn-secondary"
 
 
+def test_find_returns_tap_tip(lab: None) -> None:
+    goto("link-tap")
+    code, result = run("ui", "find", "--identifier", "btn-primary")
+    assert code == 0 and result["count"] >= 1
+    match = result["matches"][0]
+    assert match["identifier"] == "btn-primary"
+    assert any(
+        t["action"] == "tap" and '--identifier "btn-primary"' in t["command"]
+        for t in match["tips"]
+    )
+
+
+def test_find_no_tips(lab: None) -> None:
+    goto("link-tap")
+    code, result = run("ui", "find", "--identifier", "btn-primary", "--no-tips")
+    assert code == 0
+    assert result["matches"][0]["tips"] == []
+
+
+def test_find_type_tip_for_textfield(lab: None) -> None:
+    goto("link-type")
+    code, result = run("ui", "find", "--type", "TextField", "--limit", "1")
+    assert code == 0 and result["count"] == 1
+    assert any(t["action"] == "type" for t in result["matches"][0]["tips"])
+
+
 def test_double_tap(lab: None) -> None:
     goto("link-gesture")
     code, result = run("ui", "double-tap", "--identifier", "btn-gesture")

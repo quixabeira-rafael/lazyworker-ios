@@ -17,8 +17,11 @@ from typing import Any
 
 import pytest
 
+from lazyworker.paths import state_dir
+
 LAB_BUNDLE = "com.lazyworker.lab"
-RUN_STATE = Path.home() / ".lazyworker" / "run.json"
+# Per-project state: lazyworker resolves run state next to the discovered lazyworker.toml.
+RUN_STATE = state_dir() / "run.json"
 LAZYWORKER = str(Path(sys.executable).parent / "lazyworker")
 
 
