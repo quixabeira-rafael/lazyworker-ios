@@ -96,7 +96,9 @@ def test_scroll_down_reveals_marker(lab: None) -> None:
     goto("link-scroll")
     assert is_visible("marker-top")
     assert not is_visible("marker-bottom")
-    code, result = run("ui", "scroll", "--direction", "down")
+    # Wait for the scroll fling to settle before reading the tree, otherwise the
+    # visibility check races the iOS deceleration.
+    code, result = run("ui", "scroll", "--direction", "down", "--wait", "settle")
     assert code == 0 and result["ok"]
     assert is_visible("marker-bottom")
     assert not is_visible("marker-top")
@@ -217,17 +219,19 @@ def test_wait_tree_no_change_errors(lab: None) -> None:
 
 
 def test_wait_settle_change_succeeds(lab: None) -> None:
-    goto("link-wait")
-    code, result = run("ui", "tap", "--identifier", "wait-mutate", "--wait", "settle")
+    # 'instant' fills the box with a solid colour: a substantial, settling change.
+    goto("link-timing")
+    code, result = run("ui", "tap", "--identifier", "timing-instant", "--wait", "settle")
     assert code == 0 and result["ok"]
     assert result["wait"]["mode"] == "settle" and result["wait"]["ok"]
     assert result["wait"]["verdict"] == "settled"
 
 
 def test_wait_settle_no_change_errors(lab: None) -> None:
-    goto("link-wait")
+    # Tapping the static phase label is a true no-op (no button highlight, no motion).
+    goto("link-timing")
     code, result = run(
-        "ui", "tap", "--identifier", "wait-noop", "--wait", "settle", "--wait-timeout", "2"
+        "ui", "tap", "--identifier", "timing-phase", "--wait", "settle", "--wait-timeout", "2"
     )
     assert code == 25
     assert result["error_code"] == "no_change"

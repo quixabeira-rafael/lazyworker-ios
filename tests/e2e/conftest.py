@@ -102,5 +102,7 @@ def _open_session(_require_e2e: None) -> Iterator[None]:
 def lab(udid: str, _open_session: None) -> None:
     """Reset to the home screen by cold-relaunching the app before each test."""
     subprocess.run(["xcrun", "simctl", "terminate", udid, LAB_BUNDLE], capture_output=True)
-    subprocess.run(["xcrun", "simctl", "launch", udid, LAB_BUNDLE], capture_output=True)
+    # The relaunch invalidates the WDA session bound to the old process, so open
+    # a fresh one (this also cold-launches the app).
+    run("ui", "open", LAB_BUNDLE, "--no-reuse")
     time.sleep(1.0)
