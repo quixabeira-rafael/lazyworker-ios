@@ -176,6 +176,8 @@ settles — otherwise it fails with `no_change` (exit `25`):
 - `--wait-until key=value` / `--wait-gone key=value` — wait until a selector appears / disappears
   (keys: `type|label|name|value|identifier|id`, e.g. `--wait-until id=spinner`).
 - Tune with `--wait-timeout`, `--wait-settle` (stable polls required), `--wait-interval`.
+- Set a default wait for every action with the `LAZYWORKER_DEFAULT_WAIT` env var (e.g.
+  `settle`); an explicit `--wait` overrides it, and `--wait none` opts out for one call.
 - On a failed wait, a screenshot of the final state is saved and its path is attached to the
   result (`--no-wait-shot` to disable).
 

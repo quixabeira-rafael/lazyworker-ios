@@ -10,7 +10,13 @@ from typer.testing import CliRunner
 
 from lazyworker.cli import _attach_wait_artifact, _build_wait, _signing_options, app
 from lazyworker.config import Config, SigningConfig, SigningMode
-from lazyworker.interaction.models import Action, ErrorCode, OperationResult, WaitMode
+from lazyworker.interaction.models import (
+    Action,
+    ErrorCode,
+    OperationResult,
+    SettleStrategy,
+    WaitMode,
+)
 from lazyworker.interaction.state import SessionState, load_session_state, save_session_state
 
 runner = CliRunner()
@@ -190,6 +196,24 @@ def test_ui_screen_outputs_description(
 
 def test_build_wait_none() -> None:
     assert _build_wait(Action.TAP, None, None, None, 5.0, 2, 0.4) is None
+
+
+def test_build_wait_env_default_applies(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("LAZYWORKER_DEFAULT_WAIT", "settle")
+    spec = _build_wait(Action.TAP, None, None, None, 5.0, 2, 0.4)
+    assert spec is not None and spec.mode == WaitMode.SETTLE
+    assert spec.strategy == SettleStrategy.STRICT
+
+
+def test_build_wait_explicit_overrides_env_default(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("LAZYWORKER_DEFAULT_WAIT", "settle")
+    spec = _build_wait(Action.TAP, "tree", None, None, 5.0, 2, 0.4)
+    assert spec is not None and spec.mode == WaitMode.TREE
+
+
+def test_build_wait_none_opts_out_of_env_default(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("LAZYWORKER_DEFAULT_WAIT", "settle")
+    assert _build_wait(Action.TAP, "none", None, None, 5.0, 2, 0.4) is None
 
 
 def test_build_wait_diff_tree() -> None:

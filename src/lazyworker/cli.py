@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import contextlib
 import json
+import os
 import sys
 import time
 from pathlib import Path
@@ -301,8 +302,9 @@ _Wait = Annotated[
         "--wait",
         help="Require a change after acting: 'tree' (structural) or "
         "'settle[:magnitude|:custom=<n>]' (wait for the screen to stop animating; "
-        "bare 'settle' is strict/identity-based). No change within the timeout => "
-        "exit 25 (no_change), ok=false.",
+        "bare 'settle' is strict/identity-based), or 'none' to skip. No change within "
+        "the timeout => exit 25 (no_change), ok=false. Without --wait, the "
+        "LAZYWORKER_DEFAULT_WAIT env var is used if set ('none' to opt out per call).",
     ),
 ]
 _WaitUntil = Annotated[
@@ -479,6 +481,8 @@ def _build_wait(
         locator = _predicate_locator(action, wait_gone)
         return WaitSpec(mode=WaitMode.GONE, locator=locator, **common)
     if wait is None:
+        wait = os.environ.get("LAZYWORKER_DEFAULT_WAIT")  # project/session default
+    if wait is None or wait == "none":
         return None
     if wait.startswith("settle"):
         _require_pillow(action, "settle detection")
