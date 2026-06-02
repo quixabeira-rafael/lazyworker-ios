@@ -10,6 +10,12 @@ from lazyworker.wda.models import AccessibilityNode
 TEXT_INPUT = {"TextField", "SecureTextField", "SearchField", "TextView"}
 SCROLLABLE = {"ScrollView", "Table", "CollectionView", "WebView"}
 NON_ACTIONABLE = {"Application", "Window"}
+DEFAULT_OVERVIEW_LIMIT = 25
+# Interactive controls surfaced first in a no-query overview.
+_PRIMARY = TEXT_INPUT | SCROLLABLE | {
+    "Button", "Cell", "Link", "Switch", "Toggle", "SegmentedControl",
+    "PopUpButton", "MenuButton", "Tab", "Slider", "Stepper",
+}
 
 
 def _normalize(text: str) -> str:
@@ -107,6 +113,18 @@ def search_tree(
     )
     indices = jqengine.evaluate(program, payload)
     return [nodes[index] for index in indices if isinstance(index, int)]
+
+
+def overview(node: AccessibilityNode, *, include_hidden: bool = False) -> list[AccessibilityNode]:
+    """Actionable elements on the current screen, for a ``ui find`` with no query/selector.
+
+    Every addressable node (one ``tips_for`` can build a command for), ordered controls-first
+    then reading order, so an empty ``find`` still reports what is on screen and how to act on it.
+    The caller caps the list (see ``DEFAULT_OVERVIEW_LIMIT``).
+    """
+    actionable = [n for n in search_tree(node, include_hidden=include_hidden) if tips_for(n)]
+    actionable.sort(key=lambda n: 0 if n.type in _PRIMARY else 1)  # stable: keeps reading order
+    return actionable
 
 
 def _quote(text: str) -> str:

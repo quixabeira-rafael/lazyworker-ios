@@ -1,6 +1,6 @@
 from typing import Any
 
-from lazyworker.interaction.search import search_tree, tips_for
+from lazyworker.interaction.search import overview, search_tree, tips_for
 from lazyworker.wda.models import AccessibilityNode
 
 
@@ -76,6 +76,24 @@ def test_excludes_hidden_by_default() -> None:
 def test_limit_caps_results() -> None:
     matches = search_tree(_tree([_CELL_A, _BTN]), query="joilane", limit=1)
     assert len(matches) == 1
+
+
+# --- overview ---
+
+
+def test_overview_returns_actionable_controls_first() -> None:
+    text = {"type": "StaticText", "label": "Header", "isVisible": True}
+    button = {"type": "Button", "label": "Go", "isVisible": True}
+    tree = _tree([text, button])
+    result = overview(tree)
+    # the Button (a control) is ranked before the plain StaticText, even though it comes later
+    assert [n.label for n in result] == ["Go", "Header"]
+
+
+def test_overview_skips_hidden_and_non_addressable() -> None:
+    tree = _tree([_HIDDEN, {"type": "Button", "isVisible": True}])  # hidden + button with no label
+    # hidden is excluded; the addressless button has no tip, so it drops out too
+    assert overview(tree) == []
 
 
 # --- tips_for ---

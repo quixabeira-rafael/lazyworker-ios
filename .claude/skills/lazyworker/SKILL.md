@@ -59,7 +59,10 @@ lazyworker ui find menu                        # matches id "hamburger-menu-butt
 lazyworker ui find button                      # match by type
 lazyworker ui find back --type Button          # add a type filter to narrow
 lazyworker ui find --identifier btn-primary    # exact field match (no free text)
+lazyworker ui find                             # no query: overview of the screen (controls first, with tips)
 ```
+
+**Bare `ui find` (no query, no selector) is your fastest "what's here?"** — it returns the screen's actionable elements, controls first, each with ready-to-copy command tips, plus a `hint` on how to narrow. No more guessing the first selector.
 
 **Read the result with `--jq`, not an inline script.** Pass a jq expression (a bundled jq engine, run with `-r`, so no `jq` install is needed) to filter/map/reduce the JSON in place — strings come out raw, objects stay JSON:
 

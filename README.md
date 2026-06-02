@@ -166,7 +166,12 @@ lazyworker ui find back                       # anything with "back" in any fiel
 lazyworker ui find menu                        # matches id "hamburger-menu-button" or label "Menu"
 lazyworker ui find joilane --type Cell        # type as an extra filter
 lazyworker ui find --identifier btn-primary   # exact field match (no free text)
+lazyworker ui find                            # no query: overview of the screen's actionable elements
 ```
+
+With no query and no selector, `ui find` returns an overview of the current screen's actionable
+elements (controls first), each with command tips and a `hint` on how to narrow — instead of an
+error.
 
 Filter/map the result in place with `--jq <expr>` (via a bundled jq engine — no `jq` install
 needed — run with `-r`), instead of piping or writing a script:

@@ -165,6 +165,7 @@ class SearchResult(BaseModel):
 
     count: int
     matches: list[FoundElement]
+    hint: str | None = None
 
 
 class OperationResult(BaseModel):

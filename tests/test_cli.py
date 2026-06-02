@@ -205,6 +205,21 @@ def test_ui_find_jq_filters_output(
     assert result.stdout.strip() == "Login"  # raw label, filtered by jq
 
 
+def test_ui_find_no_args_returns_screen_overview(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path, httpx_mock: HTTPXMock
+) -> None:
+    _use_state_dir(monkeypatch, tmp_path)
+    _seed_session(tmp_path)
+    httpx_mock.add_response(url=f"{BASE}/source?format=json", json=_tree([BUTTON]))
+    result = runner.invoke(app, ["ui", "find"])
+    assert result.exit_code == 0  # no longer an error
+    data = json.loads(result.stdout)
+    assert data["count"] == 1
+    assert data["matches"][0]["label"] == "Login"
+    assert data["matches"][0]["tips"]  # complete command tips included
+    assert "no query given" in data["hint"]
+
+
 def test_ui_schema_text_lists_fields_and_types() -> None:
     result = runner.invoke(app, ["ui", "schema"])
     assert result.exit_code == 0
@@ -415,16 +430,6 @@ def test_ui_find_query_returns_matches(
     data = json.loads(result.stdout)
     assert data["count"] == 1
     assert data["matches"][0]["label"] == "Login"
-
-
-def test_ui_find_requires_criteria(
-    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
-) -> None:
-    _use_state_dir(monkeypatch, tmp_path)
-    _seed_session(tmp_path)
-    result = runner.invoke(app, ["ui", "find"])
-    assert result.exit_code == 30
-    assert '"invalid_target"' in result.stdout
 
 
 def test_ui_find_includes_tips_by_default(

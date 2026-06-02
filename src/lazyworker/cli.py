@@ -42,7 +42,12 @@ from lazyworker.interaction.models import (
 )
 from lazyworker.interaction.ocr import OcrUnavailable, recognize
 from lazyworker.interaction.screen import describe_screen
-from lazyworker.interaction.search import search_tree, tips_for
+from lazyworker.interaction.search import (
+    DEFAULT_OVERVIEW_LIMIT,
+    overview,
+    search_tree,
+    tips_for,
+)
 from lazyworker.interaction.settings import (
     DEFAULT_CUSTOM_SNAPSHOT_TIMEOUT,
     DEFAULT_SCROLL_DISTANCE,
@@ -696,7 +701,8 @@ def ui_find(
     query: str | None = typer.Argument(
         None,
         help="Free text matched against type and every text field (substring, "
-        "case-insensitive, accent- and whitespace-insensitive). E.g. `ui find back`.",
+        "case-insensitive, accent- and whitespace-insensitive). E.g. `ui find back`. "
+        "Omit it (and all selectors) for an overview of the current screen.",
     ),
     query_opt: str | None = typer.Option(
         None, "--query", "-q", help="Same as the positional query."
@@ -721,30 +727,38 @@ def ui_find(
     ),
     base_url: _UiBaseUrl = None,
 ) -> None:
-    """Search the accessibility tree and return every matching element (read-only)."""
+    """Search the accessibility tree and return matching elements (read-only).
+
+    With no query and no selector, return an overview of the current screen's actionable
+    elements (controls first), each with ready-to-copy command tips, instead of an error.
+    """
     query = query if query is not None else query_opt
-    if query is None and not any(v is not None for v in (type_, label, name, value, identifier)):
-        _emit(
-            OperationResult.failure(
-                Action.FIND, ErrorCode.INVALID_TARGET, "provide a query or at least one selector"
-            )
-        )
+    no_filter = query is None and not any(
+        v is not None for v in (type_, label, name, value, identifier)
+    )
     interactor = _interactor(base_url)
     try:
         tree = interactor.snapshot()
     except WdaError as exc:
         _emit(OperationResult.failure(Action.FIND, _classify_wda(exc), str(exc)))
-    matches = search_tree(
-        tree,
-        query=query,
-        type=type_,
-        label=label,
-        name=name,
-        value=value,
-        identifier=identifier,
-        include_hidden=any_visibility,
-        limit=limit or None,
-    )
+    hint: str | None = None
+    if no_filter:
+        actionable = overview(tree, include_hidden=any_visibility)
+        cap = limit or DEFAULT_OVERVIEW_LIMIT
+        matches = actionable[:cap]
+        hint = _overview_hint(len(actionable), len(matches))
+    else:
+        matches = search_tree(
+            tree,
+            query=query,
+            type=type_,
+            label=label,
+            name=name,
+            value=value,
+            identifier=identifier,
+            include_hidden=any_visibility,
+            limit=limit or None,
+        )
     found = [
         FoundElement(
             **MatchedElement.from_node(node).model_dump(),
@@ -752,11 +766,29 @@ def ui_find(
         )
         for node in matches
     ]
-    result = SearchResult(count=len(found), matches=found)
+    result = SearchResult(count=len(found), matches=found, hint=hint)
     payload = result.model_dump_json(indent=2, exclude_none=True)
     if jq is not None:
         _apply_jq(Action.FIND, payload, jq)
     typer.echo(payload)
+
+
+def _overview_hint(total: int, shown: int) -> str:
+    """Guidance attached to a no-query `ui find` overview."""
+    if total == 0:
+        return (
+            "no query given and no actionable element detected — try `ui tree` for the full "
+            "structure or `ui screen --ocr` for text outside the accessibility tree"
+        )
+    if shown < total:
+        return (
+            f"no query given: showing the first {shown} of {total} actionable elements "
+            "(controls first). Narrow with `ui find <text>` or a selector like `--type Button`."
+        )
+    return (
+        f"no query given: showing {shown} actionable element(s) on the current screen "
+        "(controls first). Narrow with `ui find <text>` or a selector like `--type Button`."
+    )
 
 
 def _emit_color(result: ColorResult) -> NoReturn:
