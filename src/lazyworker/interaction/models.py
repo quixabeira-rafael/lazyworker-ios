@@ -40,6 +40,7 @@ class Action(StrEnum):
     SCREENSHOT = "screenshot"
     DEEPLINK = "deeplink"
     FIND = "find"
+    COLOR = "color"
 
 
 class ScrollDirection(StrEnum):
@@ -120,6 +121,22 @@ class MatchedElement(BaseModel):
             rect=node.rect,
             visible=node.visible,
         )
+
+
+class ColorResult(BaseModel):
+    """Background and text colour read from a text element's box, for assertions."""
+
+    operation: Action = Action.COLOR
+    ok: bool
+    error_code: ErrorCode = ErrorCode.OK
+    message: str | None = None
+    element: MatchedElement | None = None
+    background: tuple[int, int, int] | None = None
+    text: tuple[int, int, int] | None = None
+    solid_background: bool | None = None
+    glyph_ratio: float | None = None
+    confidence: float | None = None
+    note: str | None = None
 
 
 class Tip(BaseModel):

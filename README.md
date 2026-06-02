@@ -118,6 +118,7 @@ code so an agent can branch on `$?`.
 | `ui close` | Close the active app session. |
 | `ui tree` | Print the current accessibility tree (session-tuned snapshot). |
 | `ui find` | Search the tree (read-only); return every element matching a free-text query and/or selectors. |
+| `ui color` | Read an element's background and text colour (`--text`/`--background` to narrow). Returns the colours as data; assertions are the caller's job. |
 | `ui tap` | Tap an element (by selector) or a coordinate. |
 | `ui double-tap` | Double-tap an element or a coordinate. |
 | `ui long-press` | Long-press an element or a coordinate (`--duration`). |

@@ -27,6 +27,7 @@ from lazyworker.interaction.interactor import Interactor, build_interactor, open
 from lazyworker.interaction.locator import Locator
 from lazyworker.interaction.models import (
     Action,
+    ColorResult,
     ErrorCode,
     FoundElement,
     MatchedElement,
@@ -684,6 +685,44 @@ def ui_find(
     ]
     result = SearchResult(count=len(found), matches=found)
     typer.echo(result.model_dump_json(indent=2, exclude_none=True))
+
+
+def _emit_color(result: ColorResult) -> NoReturn:
+    typer.echo(result.model_dump_json(indent=2, exclude_none=True))
+    raise typer.Exit(code=0 if result.ok else exit_code_for(result.error_code))
+
+
+@ui_app.command("color")
+def ui_color(
+    type_: _Type = None,
+    label: _Label = None,
+    name: _Name = None,
+    value: _Value = None,
+    identifier: _Identifier = None,
+    index: _Index = None,
+    any_visibility: _AnyVis = False,
+    text: bool = typer.Option(False, "--text", help="Return only the text (glyph) colour."),
+    background: bool = typer.Option(
+        False, "--background", help="Return only the background colour."
+    ),
+    base_url: _UiBaseUrl = None,
+) -> None:
+    """Read an element's background and text colour (assertions are the caller's job)."""
+    interactor = _interactor(base_url)
+    locator = _locator(type_, label, name, value, identifier, index, any_visibility)
+    if locator is None:
+        _emit(
+            OperationResult.failure(
+                Action.COLOR, ErrorCode.INVALID_TARGET, "color requires a selector"
+            )
+        )
+    result = interactor.color(locator)
+    if result.ok and (text or background):  # narrow the output to the requested channel
+        if not text:
+            result.text = None
+        if not background:
+            result.background = None
+    _emit_color(result)
 
 
 @ui_app.command("tap")

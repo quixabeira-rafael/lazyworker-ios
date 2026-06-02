@@ -92,6 +92,34 @@ def test_scroll_to_far_row(lab: None) -> None:
     assert event_log() == "scrolled_to:row-50"
 
 
+def _rgb_close(a, b, tol=40.0):
+    return sum((x - y) ** 2 for x, y in zip(a, b, strict=False)) ** 0.5 <= tol
+
+
+def test_color_reads_text_and_background(lab: None) -> None:
+    goto("link-color")
+    code, r = run("ui", "color", "--identifier", "color-white-on-red")
+    assert code == 0 and r["ok"]
+    assert _rgb_close(r["text"], (255, 255, 255))
+    assert _rgb_close(r["background"], (255, 59, 48))  # systemRed
+
+
+def test_color_text_only_narrows_output(lab: None) -> None:
+    goto("link-color")
+    code, r = run("ui", "color", "--identifier", "color-red-on-white", "--text")
+    assert code == 0 and r["ok"]
+    assert _rgb_close(r["text"], (255, 59, 48))  # systemRed
+    assert "background" not in r  # narrowed to the text channel only
+
+
+def test_color_gradient_background_is_flagged(lab: None) -> None:
+    goto("link-color")
+    code, r = run("ui", "color", "--identifier", "color-on-gradient")
+    assert code == 0
+    assert r["solid_background"] is False and r["note"] == "gradient_background"
+    assert _rgb_close(r["text"], (255, 255, 255))
+
+
 def test_scroll_down_reveals_marker(lab: None) -> None:
     goto("link-scroll")
     assert is_visible("marker-top")
