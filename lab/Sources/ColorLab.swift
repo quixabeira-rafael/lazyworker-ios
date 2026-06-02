@@ -23,6 +23,16 @@ struct ColorLab: View {
                     .accessibilityIdentifier("color-on-gradient")
                 swatch("Low contrast", fg: Color(white: 0.66), bg: Color(white: 0.78),
                        id: "color-low-contrast")
+                HStack {
+                    Text("Has green dot").foregroundColor(.black)
+                    Spacer()
+                    Circle().fill(.green).frame(width: 18, height: 18)  // minority badge colour
+                }
+                .padding(.horizontal)
+                .frame(maxWidth: .infinity, minHeight: 48)
+                .background(Color.white)
+                .accessibilityElement(children: .combine)
+                .accessibilityIdentifier("color-badge-row")
                 Spacer()
             }
             .padding()

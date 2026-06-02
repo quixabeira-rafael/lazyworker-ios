@@ -139,3 +139,32 @@ def _median_pixel(pixels: list[Pixel]) -> tuple[int, int, int]:
         sorted(p[1] for p in pixels)[len(pixels) // 2],
         sorted(p[2] for p in pixels)[len(pixels) // 2],
     )
+
+
+def color_palette(image: Any, *, top: int = 8) -> list[tuple[tuple[int, int, int], float]]:
+    """The most common colours in a box as (mean colour, pixel fraction), descending.
+
+    Quantizes to merge near-identical shades, so a caller can do a 'contains' check
+    (is there a colour near #X present at all) instead of only the dominant colour.
+    """
+    data = image.convert("RGB").tobytes()
+    total = len(data) // 3
+    if not total:
+        return []
+    acc: dict[tuple[int, int, int], list[int]] = {}
+    for i in range(0, len(data), 3):
+        r, g, b = data[i], data[i + 1], data[i + 2]
+        key = (r // QUANT, g // QUANT, b // QUANT)
+        bucket = acc.get(key)
+        if bucket is None:
+            acc[key] = [1, r, g, b]
+        else:
+            bucket[0] += 1
+            bucket[1] += r
+            bucket[2] += g
+            bucket[3] += b
+    ranked = sorted(acc.values(), key=lambda c: c[0], reverse=True)[:top]
+    return [
+        ((round(c[1] / c[0]), round(c[2] / c[0]), round(c[3] / c[0])), round(c[0] / total, 4))
+        for c in ranked
+    ]

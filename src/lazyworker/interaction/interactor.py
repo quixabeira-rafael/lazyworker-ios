@@ -5,6 +5,7 @@ import time
 from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Any
 
 from lazyworker.interaction.locator import Locator, LocatorResolver
 from lazyworker.interaction.models import (
@@ -13,6 +14,7 @@ from lazyworker.interaction.models import (
     ErrorCode,
     MatchedElement,
     OperationResult,
+    PaletteColor,
     ScrollDirection,
     WaitMode,
     WaitOutcome,
@@ -23,7 +25,7 @@ from lazyworker.interaction.settings import (
     SessionOptions,
 )
 from lazyworker.interaction.state import load_session_state
-from lazyworker.interaction.textcolor import read_text_color
+from lazyworker.interaction.textcolor import color_palette, read_text_color
 from lazyworker.interaction.wait import (
     WaitSpec,
     frame_features,
@@ -37,6 +39,7 @@ from lazyworker.wda.models import AccessibilityNode
 from lazyworker.wda.session import Session
 
 Point = tuple[int, int]
+POINT_BOX = 9  # points: side of the neighbourhood `ui color --at` samples around a point
 # (tree signature, settle baseline (colour signature, fingerprint))
 Before = tuple[str | None, tuple[tuple[int, ...], str] | None]
 
@@ -85,56 +88,97 @@ class Interactor:
     def screenshot(self) -> bytes:
         return self._session.screenshot()
 
-    def color(self, locator: Locator) -> ColorResult:
-        """Read the background and text colour of the element matched by ``locator``."""
+    def color(
+        self,
+        locator: Locator | None = None,
+        *,
+        at: Point | None = None,
+        region: tuple[int, int, int, int] | None = None,
+        palette: bool = False,
+    ) -> ColorResult:
+        """Read background and text colour from an element box, a point (--at) or a region.
+
+        Exactly one source must be given. ``at`` samples a small neighbourhood; ``region``
+        is an explicit (x, y, width, height) box in points. Both reuse the same reader, so
+        ``background`` is the box's dominant colour and ``text`` its separable foreground.
+        """
         try:
             tree = self._session.source()
         except (WdaConnectionError, WdaResponseError) as exc:
             return ColorResult(ok=False, error_code=self._classify(exc), message=str(exc))
-        resolution = self._resolver.resolve(tree, locator)
-        if resolution.node is None:
-            message = (
-                "no element matched"
-                if resolution.error_code == ErrorCode.NOT_FOUND
-                else f"{resolution.candidate_count} elements matched"
-            )
-            return ColorResult(ok=False, error_code=resolution.error_code, message=message)
-        node = resolution.node
-        rect = node.rect
-        if rect is None or not rect.width or not rect.height:
+        element: MatchedElement | None = None
+        if locator is not None:
+            resolution = self._resolver.resolve(tree, locator)
+            if resolution.node is None:
+                message = (
+                    "no element matched"
+                    if resolution.error_code == ErrorCode.NOT_FOUND
+                    else f"{resolution.candidate_count} elements matched"
+                )
+                return ColorResult(ok=False, error_code=resolution.error_code, message=message)
+            rect = resolution.node.rect
+            element = MatchedElement.from_node(resolution.node)
+            if rect is None or not rect.width or not rect.height:
+                return ColorResult(
+                    ok=False, error_code=ErrorCode.NO_RECT, message="element has no frame",
+                    element=element,
+                )
+            box_pts = (rect.x, rect.y, rect.width, rect.height)
+        elif at is not None:
+            box_pts = (at[0] - POINT_BOX // 2, at[1] - POINT_BOX // 2, POINT_BOX, POINT_BOX)
+        elif region is not None:
+            box_pts = region
+        else:
             return ColorResult(
-                ok=False, error_code=ErrorCode.NO_RECT, message="element has no frame",
-                element=MatchedElement.from_node(node),
+                ok=False, error_code=ErrorCode.INVALID_TARGET,
+                message="color needs a selector, --at or --region",
             )
         try:
             png = self._session.screenshot()
         except (WdaConnectionError, WdaResponseError) as exc:
-            return ColorResult(ok=False, error_code=self._classify(exc), message=str(exc))
+            return ColorResult(ok=False, error_code=self._classify(exc), message=str(exc),
+                               element=element)
         try:
             from PIL import Image
         except ImportError:
             return ColorResult(
                 ok=False, error_code=ErrorCode.OCR_UNAVAILABLE,
                 message="colour reading needs Pillow; install: pip install 'lazyworker[ocr]'",
-                element=MatchedElement.from_node(node),
+                element=element,
             )
         image = Image.open(io.BytesIO(png)).convert("RGB")
         scale = image.width / (tree.rect.width if tree.rect and tree.rect.width else image.width)
-        box = (
-            round(rect.x * scale), round(rect.y * scale),
-            round((rect.x + rect.width) * scale), round((rect.y + rect.height) * scale),
+        crop = self._crop_box(image, box_pts, scale)
+        if crop is None:
+            return ColorResult(
+                ok=False, error_code=ErrorCode.OUT_OF_BOUNDS,
+                message=f"box {box_pts} is outside the screen", element=element,
+            )
+        reading = read_text_color(crop)
+        entries = (
+            [PaletteColor(color=c, ratio=r) for c, r in color_palette(crop)] if palette else None
         )
-        reading = read_text_color(image.crop(box))
         return ColorResult(
             ok=True,
-            element=MatchedElement.from_node(node),
+            element=element,
             background=reading.background,
             text=reading.text,
             solid_background=reading.solid_background,
             glyph_ratio=reading.glyph_ratio,
             confidence=reading.confidence,
             note=reading.note,
+            palette=entries,
         )
+
+    @staticmethod
+    def _crop_box(image: Any, box_pts: tuple[int, int, int, int], scale: float) -> Any:
+        x, y, w, h = box_pts
+        left, top = max(0, round(x * scale)), max(0, round(y * scale))
+        right = min(image.width, round((x + w) * scale))
+        bottom = min(image.height, round((y + h) * scale))
+        if right <= left or bottom <= top:
+            return None
+        return image.crop((left, top, right, bottom))
 
     def tap(
         self,

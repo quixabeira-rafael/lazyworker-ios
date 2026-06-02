@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import pytest
 
-from lazyworker.interaction.textcolor import read_text_color
+from lazyworker.interaction.textcolor import color_palette, read_text_color
 
 Image = pytest.importorskip("PIL.Image")
 ImageDraw = pytest.importorskip("PIL.ImageDraw")
@@ -149,3 +149,52 @@ def test_interactor_color_not_found():
     interactor = Interactor(_FakeSession(root, b""))  # type: ignore[arg-type]
     result = interactor.color(Locator(identifier="missing"))
     assert not result.ok and result.error_code.value == "not_found"
+
+
+def _interactor_with_red_block():
+    import io
+
+    from lazyworker.interaction.interactor import Interactor
+    from lazyworker.wda.models import AccessibilityNode, Rect
+
+    root = AccessibilityNode(
+        type="Window", visible=True, rect=Rect(x=0, y=0, width=100, height=100)
+    )
+    img = Image.new("RGB", (100, 100), (250, 250, 250))  # scale = 100/100 = 1
+    ImageDraw.Draw(img).rectangle([22, 14, 58, 26], fill=(220, 50, 50))
+    buf = io.BytesIO()
+    img.save(buf, format="PNG")
+    return Interactor(_FakeSession(root, buf.getvalue()))  # type: ignore[arg-type]
+
+
+def test_interactor_color_region():
+    result = _interactor_with_red_block().color(region=(0, 0, 100, 100))
+    assert result.ok and result.element is None
+    assert _close(result.background, (250, 250, 250))  # dominant = white
+    assert result.text is not None and _close(result.text, (220, 50, 50))  # block = foreground
+
+
+def test_interactor_color_at_point():
+    result = _interactor_with_red_block().color(at=(40, 20))  # inside the red block
+    assert result.ok and _close(result.background, (220, 50, 50))
+
+
+def test_interactor_color_requires_a_source():
+    result = _interactor_with_red_block().color()
+    assert not result.ok and result.error_code.value == "invalid_target"
+
+
+def test_color_palette_surfaces_minority_colour():
+    img = Image.new("RGB", (100, 100), (250, 250, 250))
+    ImageDraw.Draw(img).rectangle([42, 46, 58, 54], fill=(220, 50, 50))  # small red region
+    colors = [c for c, _ in color_palette(img)]
+    assert any(_close(c, (250, 250, 250)) for c in colors)  # background present
+    assert any(_close(c, (220, 50, 50)) for c in colors)  # minority surfaced -> contains works
+
+
+def test_interactor_palette_opt_in():
+    full = _interactor_with_red_block().color(region=(0, 0, 100, 100), palette=True)
+    assert full.palette is not None
+    assert any(_close(tuple(e.color), (220, 50, 50)) for e in full.palette)
+    bare = _interactor_with_red_block().color(region=(0, 0, 100, 100))
+    assert bare.palette is None

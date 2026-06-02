@@ -123,6 +123,13 @@ class MatchedElement(BaseModel):
         )
 
 
+class PaletteColor(BaseModel):
+    """One colour present in a box and the fraction of pixels it covers."""
+
+    color: tuple[int, int, int]
+    ratio: float
+
+
 class ColorResult(BaseModel):
     """Background and text colour read from a text element's box, for assertions."""
 
@@ -137,6 +144,7 @@ class ColorResult(BaseModel):
     glyph_ratio: float | None = None
     confidence: float | None = None
     note: str | None = None
+    palette: list[PaletteColor] | None = None
 
 
 class Tip(BaseModel):

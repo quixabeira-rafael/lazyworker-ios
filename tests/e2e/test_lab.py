@@ -112,6 +112,35 @@ def test_color_text_only_narrows_output(lab: None) -> None:
     assert "background" not in r  # narrowed to the text channel only
 
 
+def test_color_region_reads_dominant(lab: None) -> None:
+    goto("link-color")
+    r = node_by_id("color-white-on-red")["rect"]
+    code, res = run("ui", "color", "--region", f"{r['x']},{r['y']},{r['width']},{r['height']}")
+    assert code == 0 and res["ok"]
+    assert _rgb_close(res["background"], (255, 59, 48))  # dominant = systemRed
+    assert _rgb_close(res["text"], (255, 255, 255))
+
+
+def test_color_at_point_samples_background(lab: None) -> None:
+    goto("link-color")
+    r = node_by_id("color-white-on-red")["rect"]
+    x, y = r["x"] + 10, r["y"] + r["height"] // 2  # left edge => the red background
+    code, res = run("ui", "color", "--at", f"{x},{y}")
+    assert code == 0 and res["ok"]
+    assert _rgb_close(res["background"], (255, 59, 48))
+
+
+def test_color_palette_contains_minority_colour(lab: None) -> None:
+    goto("link-color")
+    r = node_by_id("color-badge-row")["rect"]
+    code, res = run(
+        "ui", "color", "--region", f"{r['x']},{r['y']},{r['width']},{r['height']}", "--palette"
+    )
+    assert code == 0 and res["palette"]
+    # the dominant is the white row; a 'contains' check finds the small green dot
+    assert any(_rgb_close(e["color"], (52, 199, 89), tol=60) for e in res["palette"])
+
+
 def test_color_gradient_background_is_flagged(lab: None) -> None:
     goto("link-color")
     code, r = run("ui", "color", "--identifier", "color-on-gradient")

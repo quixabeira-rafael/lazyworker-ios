@@ -692,6 +692,23 @@ def _emit_color(result: ColorResult) -> NoReturn:
     raise typer.Exit(code=0 if result.ok else exit_code_for(result.error_code))
 
 
+def _parse_region(action: Action, value: str) -> tuple[int, int, int, int]:
+    parts = value.split(",")
+    try:
+        if len(parts) != 4:
+            raise ValueError
+        x, y, w, h = (int(p) for p in parts)
+        if w <= 0 or h <= 0:
+            raise ValueError
+        return x, y, w, h
+    except ValueError:
+        _emit(
+            OperationResult.failure(
+                action, ErrorCode.INVALID_TARGET, f"invalid --region '{value}', expected X,Y,W,H"
+            )
+        )
+
+
 @ui_app.command("color")
 def ui_color(
     type_: _Type = None,
@@ -701,22 +718,39 @@ def ui_color(
     identifier: _Identifier = None,
     index: _Index = None,
     any_visibility: _AnyVis = False,
+    at: _At = None,
+    region: str | None = typer.Option(
+        None, "--region", help="Read a region box instead of an element: X,Y,W,H (points)."
+    ),
     text: bool = typer.Option(False, "--text", help="Return only the text (glyph) colour."),
     background: bool = typer.Option(
         False, "--background", help="Return only the background colour."
     ),
+    palette: bool = typer.Option(
+        False, "--palette", help="Also list the colours present in the box (for 'contains')."
+    ),
     base_url: _UiBaseUrl = None,
 ) -> None:
-    """Read an element's background and text colour (assertions are the caller's job)."""
+    """Read background and text colour of an element, a point (--at) or a region (--region).
+
+    Assertions are the caller's job. ``background`` is the dominant colour of the box,
+    ``text`` its separable foreground (null for a point/region with no clear text).
+    ``--palette`` adds the colours present with their pixel fractions, for a contains check.
+    """
     interactor = _interactor(base_url)
     locator = _locator(type_, label, name, value, identifier, index, any_visibility)
-    if locator is None:
+    point = _parse_at(Action.COLOR, at)
+    region_box = _parse_region(Action.COLOR, region) if region is not None else None
+    sources = [locator is not None, point is not None, region_box is not None]
+    if sum(sources) != 1:
         _emit(
             OperationResult.failure(
-                Action.COLOR, ErrorCode.INVALID_TARGET, "color requires a selector"
+                Action.COLOR,
+                ErrorCode.INVALID_TARGET,
+                "provide exactly one of: a selector, --at X,Y, or --region X,Y,W,H",
             )
         )
-    result = interactor.color(locator)
+    result = interactor.color(locator, at=point, region=region_box, palette=palette)
     if result.ok and (text or background):  # narrow the output to the requested channel
         if not text:
             result.text = None
