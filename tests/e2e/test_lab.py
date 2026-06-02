@@ -216,21 +216,23 @@ def test_wait_tree_no_change_errors(lab: None) -> None:
     assert not result["wait"]["ok"]
 
 
-def test_wait_screen_change_succeeds(lab: None) -> None:
+def test_wait_settle_change_succeeds(lab: None) -> None:
     goto("link-wait")
-    code, result = run("ui", "tap", "--identifier", "wait-mutate", "--wait", "screen")
+    code, result = run("ui", "tap", "--identifier", "wait-mutate", "--wait", "settle")
     assert code == 0 and result["ok"]
-    assert result["wait"]["mode"] == "screen" and result["wait"]["ok"]
+    assert result["wait"]["mode"] == "settle" and result["wait"]["ok"]
+    assert result["wait"]["verdict"] == "settled"
 
 
-def test_wait_screen_no_change_errors(lab: None) -> None:
+def test_wait_settle_no_change_errors(lab: None) -> None:
     goto("link-wait")
     code, result = run(
-        "ui", "tap", "--identifier", "wait-noop", "--wait", "screen", "--wait-timeout", "2"
+        "ui", "tap", "--identifier", "wait-noop", "--wait", "settle", "--wait-timeout", "2"
     )
     assert code == 25
     assert result["error_code"] == "no_change"
     assert not result["wait"]["ok"]
+    assert result["wait"]["verdict"] == "no_change"
 
 
 def test_wait_until_appears_succeeds(lab: None) -> None:
@@ -345,7 +347,7 @@ def test_wait_failure_saves_screenshot(lab: None) -> None:
 
     goto("link-wait")
     code, result = run(
-        "ui", "tap", "--identifier", "wait-noop", "--wait", "screen", "--wait-timeout", "2"
+        "ui", "tap", "--identifier", "wait-noop", "--wait", "settle", "--wait-timeout", "2"
     )
     assert code == 25
     shot = result.get("screenshot")
@@ -358,7 +360,7 @@ def test_wait_failure_no_shot_when_disabled(lab: None) -> None:
     goto("link-wait")
     code, result = run(
         "ui", "tap", "--identifier", "wait-noop",
-        "--wait", "screen", "--wait-timeout", "2", "--no-wait-shot",
+        "--wait", "settle", "--wait-timeout", "2", "--no-wait-shot",
     )
     assert code == 25
     assert result.get("screenshot") is None

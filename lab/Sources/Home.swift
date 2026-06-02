@@ -10,6 +10,7 @@ struct HomeView: View {
                 List {
                     row("Tap", "link-tap") { TapLab() }
                     row("Wait", "link-wait") { WaitLab() }
+                    row("Timing", "link-timing") { TimingLab() }
                     row("Gestures", "link-gesture") { GestureLab() }
                     row("Toggles", "link-toggle") { ToggleLab() }
                     row("Type", "link-type") { TypeLab() }

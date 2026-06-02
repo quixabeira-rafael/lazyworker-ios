@@ -51,9 +51,15 @@ class ScrollDirection(StrEnum):
 
 class WaitMode(StrEnum):
     TREE = "tree"
-    SCREEN = "screen"
     UNTIL = "until"
     GONE = "gone"
+    SETTLE = "settle"
+
+
+class SettleStrategy(StrEnum):
+    STRICT = "strict"        # identity settle + busy detection, threshold-free (default posture)
+    MAGNITUDE = "magnitude"  # colour-magnitude settle, built-in threshold
+    CUSTOM = "custom"        # colour-magnitude settle, caller-supplied threshold
 
 
 class WaitOutcome(BaseModel):
@@ -65,6 +71,7 @@ class WaitOutcome(BaseModel):
     settled: bool
     attempts: int
     elapsed_s: float
+    verdict: str | None = None  # settle mode only: settled | busy | no_change
 
 
 EXIT_CODES: dict[ErrorCode, int] = {

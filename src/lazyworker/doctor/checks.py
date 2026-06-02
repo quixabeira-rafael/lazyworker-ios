@@ -171,13 +171,13 @@ def check_screen_diff(ctx: DoctorContext) -> CheckResult:
             group=CAPABILITIES,
             name="Screenshot diff",
             status=CheckStatus.OK,
-            detail="Pillow available (ui screen, --wait screen)",
+            detail="Pillow available (ui screen, --wait settle)",
         )
     return CheckResult(
         group=CAPABILITIES,
         name="Screenshot diff",
         status=CheckStatus.WARN,
-        detail="Pillow missing; ui screen and --wait screen unavailable",
+        detail="Pillow missing; ui screen and --wait settle unavailable",
         remediation="Install it: pip install 'lazyworker[ocr]'",
     )
 

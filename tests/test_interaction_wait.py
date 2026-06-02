@@ -1,16 +1,10 @@
-import io
 from typing import Any
 
 from lazyworker.interaction.interactor import Interactor
 from lazyworker.interaction.locator import Locator
 from lazyworker.interaction.models import ErrorCode, WaitMode
 from lazyworker.interaction.wait import (
-    SCREEN_CHANGED_PIXELS,
-    SCREEN_GRID,
-    SCREEN_STABLE_PIXELS,
     WaitSpec,
-    image_distance,
-    image_signature,
     tree_signature,
     wait_for,
 )
@@ -128,41 +122,6 @@ def test_tree_signature_ignores_hidden() -> None:
     assert tree_signature(_tree([_LOGIN, hidden])) == tree_signature(_tree([_LOGIN]))
 
 
-# --- image_signature / image_distance ---
-
-
-def _png(fill: tuple[int, int, int], block: tuple[int, int, int, int] | None = None) -> bytes:
-    from PIL import Image, ImageDraw
-
-    image = Image.new("RGB", (128, 256), fill)
-    if block is not None:
-        ImageDraw.Draw(image).rectangle(block, fill=(0, 0, 0))
-    buffer = io.BytesIO()
-    image.save(buffer, format="PNG")
-    return buffer.getvalue()
-
-
-def test_image_signature_has_grid_size() -> None:
-    assert len(image_signature(_png((255, 255, 255)))) == SCREEN_GRID * SCREEN_GRID
-
-
-def test_image_distance_identical_is_zero() -> None:
-    sig = image_signature(_png((255, 255, 255)))
-    assert image_distance(sig, sig) == 0
-
-
-def test_image_distance_detects_large_change() -> None:
-    white = image_signature(_png((255, 255, 255)))
-    blocked = image_signature(_png((255, 255, 255), block=(0, 60, 128, 200)))
-    assert image_distance(white, blocked) >= SCREEN_CHANGED_PIXELS
-
-
-def test_image_distance_ignores_status_bar_band() -> None:
-    white = image_signature(_png((255, 255, 255)))
-    top_only = image_signature(_png((255, 255, 255), block=(0, 0, 128, 8)))
-    assert image_distance(white, top_only) <= SCREEN_STABLE_PIXELS
-
-
 # --- Interactor integration ---
 
 
@@ -231,26 +190,6 @@ def test_tap_wait_until_predicate_appears() -> None:
     result = interactor.tap(Locator(label="Login"), wait=spec)
     assert result.ok
     assert result.wait is not None and result.wait.mode == WaitMode.UNTIL and result.wait.ok
-
-
-def test_tap_wait_screen_detects_change() -> None:
-    white = _png((255, 255, 255))
-    block = _png((255, 255, 255), block=(0, 60, 128, 200))
-    interactor = _interactor([_tree([_LOGIN])], shots=[white, block, block])
-    spec = WaitSpec(mode=WaitMode.SCREEN, timeout=10, interval=1, settle=2)
-    result = interactor.tap(Locator(label="Login"), wait=spec)
-    assert result.ok
-    assert result.wait is not None and result.wait.mode == WaitMode.SCREEN and result.wait.ok
-
-
-def test_tap_wait_screen_no_change_is_no_change() -> None:
-    white = _png((255, 255, 255))
-    interactor = _interactor([_tree([_LOGIN])], shots=[white])
-    spec = WaitSpec(mode=WaitMode.SCREEN, timeout=2, interval=1, settle=2)
-    result = interactor.tap(Locator(label="Login"), wait=spec)
-    assert not result.ok
-    assert result.error_code == ErrorCode.NO_CHANGE
-    assert result.wait is not None and not result.wait.ok
 
 
 def test_tap_wait_gone_detects_disappearance() -> None:

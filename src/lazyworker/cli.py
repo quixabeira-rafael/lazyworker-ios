@@ -32,6 +32,7 @@ from lazyworker.interaction.models import (
     OperationResult,
     ScrollDirection,
     SearchResult,
+    SettleStrategy,
     WaitMode,
     exit_code_for,
 )
@@ -76,7 +77,7 @@ ui_app = typer.Typer(
     help=(
         "Agentic app interaction: open/close a session and act on the accessibility tree. "
         "Selectors: --type/--label/--name/--value/--identifier (+ --index). Smart wait: "
-        "--wait tree|screen, --wait-until/--wait-gone key=value. "
+        "--wait tree|settle, --wait-until/--wait-gone key=value. "
         "Exit codes: 0 ok, 10 no_session, 20 not_found, 21 ambiguous, 22 not_visible, "
         "23 out_of_bounds, 24 timeout, 25 no_change, 30 invalid_target, 31 ocr_unavailable, "
         "32 detector_unavailable."
@@ -298,8 +299,10 @@ _Wait = Annotated[
     str | None,
     typer.Option(
         "--wait",
-        help="Require a diff after acting: 'tree' (structural) or 'screen' (pixel). "
-        "No change within the timeout => exit 25 (no_change), ok=false.",
+        help="Require a change after acting: 'tree' (structural) or "
+        "'settle[:magnitude|:custom=<n>]' (wait for the screen to stop animating; "
+        "bare 'settle' is strict/identity-based). No change within the timeout => "
+        "exit 25 (no_change), ok=false.",
     ),
 ]
 _WaitUntil = Annotated[
@@ -477,24 +480,62 @@ def _build_wait(
         return WaitSpec(mode=WaitMode.GONE, locator=locator, **common)
     if wait is None:
         return None
-    if wait not in ("tree", "screen"):
+    if wait.startswith("settle"):
+        _require_pillow(action, "settle detection")
+        strategy, threshold = _parse_settle(action, wait)
+        return WaitSpec(mode=WaitMode.SETTLE, strategy=strategy, threshold=threshold, **common)
+    if wait != "tree":
         _emit(
             OperationResult.failure(
-                action, ErrorCode.INVALID_TARGET, f"--wait must be 'tree' or 'screen', got '{wait}'"
+                action,
+                ErrorCode.INVALID_TARGET,
+                f"--wait must be 'tree' or 'settle[:strategy]', got '{wait}'",
             )
         )
-    if wait == "screen":
+    return WaitSpec(mode=WaitMode(wait), **common)
+
+
+def _require_pillow(action: Action, feature: str) -> None:
+    try:
+        import PIL  # noqa: F401
+    except ImportError:
+        _emit(
+            OperationResult.failure(
+                action,
+                ErrorCode.INVALID_TARGET,
+                f"{feature} needs Pillow; install: pip install 'lazyworker[ocr]'",
+            )
+        )
+
+
+def _parse_settle(action: Action, wait: str) -> tuple[SettleStrategy, float | None]:
+    """Parse 'settle' (strict), 'settle:magnitude', or 'settle:custom=<threshold>'."""
+    _, _, spec = wait.partition(":")
+    if not spec:
+        return SettleStrategy.STRICT, None
+    name, _, raw = spec.partition("=")
+    try:
+        strategy = SettleStrategy(name)
+    except ValueError:
+        _emit(
+            OperationResult.failure(
+                action,
+                ErrorCode.INVALID_TARGET,
+                f"unknown settle strategy '{name}'; use strict|magnitude|custom",
+            )
+        )
+    if strategy == SettleStrategy.CUSTOM:
         try:
-            import PIL  # noqa: F401
-        except ImportError:
+            return strategy, float(raw)
+        except ValueError:
             _emit(
                 OperationResult.failure(
                     action,
                     ErrorCode.INVALID_TARGET,
-                    "screen diff needs Pillow; install: pip install 'lazyworker[ocr]'",
+                    "settle:custom needs a numeric threshold, e.g. settle:custom=2.5",
                 )
             )
-    return WaitSpec(mode=WaitMode(wait), **common)
+    return strategy, None
 
 
 @ui_app.command("open")

@@ -22,11 +22,10 @@ from lazyworker.interaction.settings import (
 )
 from lazyworker.interaction.state import load_session_state
 from lazyworker.interaction.wait import (
-    SCREEN_CHANGED_PIXELS,
-    SCREEN_STABLE_PIXELS,
     WaitSpec,
-    image_distance,
-    image_signature,
+    color_signature,
+    fingerprint,
+    settle_wait,
     tree_signature,
     wait_for,
 )
@@ -36,6 +35,8 @@ from lazyworker.wda.models import AccessibilityNode
 from lazyworker.wda.session import Session
 
 Point = tuple[int, int]
+# (tree signature, settle baseline (colour signature, fingerprint))
+Before = tuple[str | None, tuple[tuple[int, ...], str] | None]
 
 
 @dataclass(frozen=True)
@@ -297,15 +298,14 @@ class Interactor:
         result = OperationResult.success(action, element=element, point=point)
         return self._apply_wait(result, wait, before)
 
-    def _capture_before(
-        self, wait: WaitSpec | None
-    ) -> tuple[str | None, tuple[int, ...] | None]:
-        if wait is None or wait.mode not in (WaitMode.TREE, WaitMode.SCREEN):
+    def _capture_before(self, wait: WaitSpec | None) -> Before:
+        if wait is None or wait.mode not in (WaitMode.TREE, WaitMode.SETTLE):
             return None, None
         try:
             if wait.mode == WaitMode.TREE:
                 return tree_signature(self._session.source()), None
-            return None, image_signature(self._session.screenshot())
+            png = self._session.screenshot()
+            return None, (color_signature(png), fingerprint(png))
         except (WdaConnectionError, WdaResponseError):
             return None, None
 
@@ -313,7 +313,7 @@ class Interactor:
         self,
         result: OperationResult,
         wait: WaitSpec | None,
-        before: tuple[str | None, tuple[int, ...] | None],
+        before: Before,
     ) -> OperationResult:
         if wait is None:
             return result
@@ -326,30 +326,12 @@ class Interactor:
         return result
 
     def _run_wait(
-        self, wait: WaitSpec, before: tuple[str | None, tuple[int, ...] | None]
+        self, wait: WaitSpec, before: Before
     ) -> WaitOutcome:
-        before_tree, before_img = before
-        if wait.mode == WaitMode.SCREEN:
-            empty: tuple[int, ...] = ()
-
-            def observe_img() -> tuple[int, ...]:
-                try:
-                    return image_signature(self._session.screenshot())
-                except (WdaConnectionError, WdaResponseError):
-                    return before_img if before_img is not None else empty
-
-            ok, satisfied, settled, attempts, elapsed = wait_for(
-                observe_img,
-                lambda px: before_img is not None
-                and image_distance(px, before_img) >= SCREEN_CHANGED_PIXELS,
-                same=lambda a, b: image_distance(a, b) <= SCREEN_STABLE_PIXELS,
-                timeout=wait.timeout,
-                interval=wait.interval,
-                settle=wait.settle,
-                sleep=self._sleep,
-                clock=self._clock,
-            )
-        elif wait.mode in (WaitMode.UNTIL, WaitMode.GONE):
+        before_tree, before_settle = before
+        if wait.mode == WaitMode.SETTLE:
+            return self._run_settle(wait, before_settle)
+        if wait.mode in (WaitMode.UNTIL, WaitMode.GONE):
             assert wait.locator is not None
             want_present = wait.mode == WaitMode.UNTIL
 
@@ -395,6 +377,35 @@ class Interactor:
             settled=settled,
             attempts=attempts,
             elapsed_s=round(elapsed, 3),
+        )
+
+    def _run_settle(
+        self, wait: WaitSpec, baseline: tuple[tuple[int, ...], str] | None
+    ) -> WaitOutcome:
+        if baseline is None:
+            return WaitOutcome(
+                mode=wait.mode, ok=False, satisfied=False, settled=False,
+                attempts=0, elapsed_s=0.0, verdict="no_change",
+            )
+
+        def observe() -> tuple[tuple[int, ...], str]:
+            try:
+                png = self._session.screenshot()
+            except (WdaConnectionError, WdaResponseError):
+                return baseline
+            return color_signature(png), fingerprint(png)
+
+        outcome = settle_wait(
+            observe, baseline, spec=wait, sleep=self._sleep, clock=self._clock
+        )
+        return WaitOutcome(
+            mode=wait.mode,
+            ok=outcome.settled,
+            satisfied=outcome.onset,
+            settled=outcome.settled,
+            attempts=outcome.attempts,
+            elapsed_s=outcome.elapsed_s,
+            verdict=outcome.verdict,
         )
 
     def _bounds_error(self, action: Action, point: Point) -> OperationResult | None:

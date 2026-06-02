@@ -169,7 +169,9 @@ plus an unambiguous `--at` fallback. Use `--no-tips` for lean output.
 settles — otherwise it fails with `no_change` (exit `25`):
 
 - `--wait tree` — wait for a structural change in the accessibility tree.
-- `--wait screen` — wait for a pixel change in a screenshot diff.
+- `--wait settle` — wait for the screen to stop animating after the action (colour-aware,
+  identity-based; reports `settled`/`busy`/`no_change`). Postures: `settle:magnitude` /
+  `settle:custom=<n>` use a colour-magnitude threshold instead.
 - `--wait-until key=value` / `--wait-gone key=value` — wait until a selector appears / disappears
   (keys: `type|label|name|value|identifier|id`, e.g. `--wait-until id=spinner`).
 - Tune with `--wait-timeout`, `--wait-settle` (stable polls required), `--wait-interval`.
@@ -178,7 +180,7 @@ settles — otherwise it fails with `no_change` (exit `25`):
 
 ```bash
 lazyworker ui tap --identifier submit --wait-until "id=home"
-lazyworker ui tap --label Refresh --wait screen
+lazyworker ui tap --label "Começar" --wait settle
 ```
 
 **Exit codes.** `0` ok, `10` no_session, `11` wda_unreachable, `12` session_invalid,
