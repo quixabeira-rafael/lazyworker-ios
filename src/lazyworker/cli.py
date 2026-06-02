@@ -57,6 +57,7 @@ from lazyworker.interaction.state import (
     load_session_state,
     save_session_state,
 )
+from lazyworker.interaction.tree_schema import render_schema_text, schema_document
 from lazyworker.interaction.wait import (
     DEFAULT_INTERVAL,
     DEFAULT_SETTLE,
@@ -673,6 +674,21 @@ def ui_tree(base_url: _UiBaseUrl = None) -> None:
     except WdaError as exc:
         _emit(OperationResult.failure(Action.TREE, _classify_wda(exc), str(exc)))
     typer.echo(tree.model_dump_json(indent=2, exclude_none=True))
+
+
+@ui_app.command("schema")
+def ui_schema(
+    as_json: bool = typer.Option(False, "--json", help="Emit the schema as machine-readable JSON."),
+) -> None:
+    """Explain the accessibility-tree node fields and the catalog of element types.
+
+    Read-only reference (no session needed): what every `ui tree`/`ui find` field
+    means, where it comes from, and which `type` values exist.
+    """
+    if as_json:
+        typer.echo(json.dumps(schema_document(), indent=2))
+    else:
+        typer.echo(render_schema_text(), nl=False)
 
 
 @ui_app.command("find")

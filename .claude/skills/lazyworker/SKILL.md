@@ -81,6 +81,8 @@ lazyworker ui find button | jq --arg t Button '[.matches[]|select(.type==$t)]'  
 
 Each match carries its `rect` and ready-to-copy **tips** (`--tips`, on by default) — e.g. the exact `ui tap --identifier …` to act on it. Use `find` when you don't yet know the selector; use `ui tree` only when you need the whole structure; use `ui screen` when you want a flattened, reading-order breakdown (and `--ocr`/`--detect` to recover text/elements that aren't in the accessibility tree — common in Flutter/canvas UIs).
 
+**Unsure what a field or `type` means?** Run `lazyworker ui schema` (add `--json` for machine form) — it explains every node field, where it comes from, which to anchor on (`identifier` > `label`+`type` > `--at`), and the full catalog of element types. The long-form version with command combinations lives in `docs/tree-schema.md` and `docs/recipes.md`.
+
 ## Act — tap, scroll, type
 
 **Tap.** Prefer a selector; the rect/center is resolved for you. Drop to `--at` only for non-addressable targets.

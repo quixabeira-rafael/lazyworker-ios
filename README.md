@@ -128,6 +128,7 @@ code so an agent can branch on `$?`.
 | `ui open BUNDLE_ID` | Open an app, create a tuned session, and persist it (`--reuse/--no-reuse`, `--snapshot-max-depth`, `--snapshot-timeout`, `--wait-for-quiescence`). |
 | `ui close` | Close the active app session. |
 | `ui tree` | Print the current accessibility tree (session-tuned snapshot). |
+| `ui schema` | Explain the tree node fields and the catalog of element `type` values (`--json` for machine form). |
 | `ui find [query]` | Search the tree (read-only); a forgiving positional substring across type + all text fields, plus optional exact selectors. |
 | `ui color` | Read background and text colour of an element, a point (`--at X,Y`) or a region (`--region X,Y,W,H`); `--text`/`--background` narrow, `--palette` lists colours present (for a `contains` check). Returns colours as data; assertions are the caller's job. |
 | `ui tap` | Tap an element (by selector) or a coordinate. |
@@ -216,6 +217,11 @@ lazyworker ui tap --label "Começar" --wait settle
 **Exit codes.** `0` ok, `10` no_session, `11` wda_unreachable, `12` session_invalid,
 `13` wda_error, `20` not_found, `21` ambiguous, `22` not_visible, `23` out_of_bounds, `24` timeout,
 `25` no_change, `30` invalid_target, `31` ocr_unavailable, `32` detector_unavailable, `1` internal.
+
+**Deeper reference.** [`docs/tree-schema.md`](docs/tree-schema.md) documents every tree node field
+(and how to pick a stable selector) plus the full element-type catalog; [`docs/recipes.md`](docs/recipes.md)
+collects command combinations (orient → find → act → verify, `--jq` extraction, colour checks,
+batching). The schema is also available at the terminal via `lazyworker ui schema`.
 
 ### Screen understanding (`ui screen`)
 

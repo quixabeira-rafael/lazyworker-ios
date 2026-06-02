@@ -205,6 +205,24 @@ def test_ui_find_jq_filters_output(
     assert result.stdout.strip() == "Login"  # raw label, filtered by jq
 
 
+def test_ui_schema_text_lists_fields_and_types() -> None:
+    result = runner.invoke(app, ["ui", "schema"])
+    assert result.exit_code == 0
+    assert "identifier" in result.stdout
+    assert "Button" in result.stdout
+    assert "accessibilityLabel" in result.stdout
+
+
+def test_ui_schema_json_is_structured() -> None:
+    result = runner.invoke(app, ["ui", "schema", "--json"])
+    assert result.exit_code == 0
+    doc = json.loads(result.stdout)
+    names = {field["name"] for field in doc["node_fields"]}
+    assert {"type", "identifier", "label", "value", "rect", "visible"} <= names
+    flat = [t for group in doc["element_types"].values() for t in group]
+    assert "Button" in flat and "StaticText" in flat
+
+
 def test_build_wait_none() -> None:
     assert _build_wait(Action.TAP, None, None, None, 5.0, 2, 0.4) is None
 
