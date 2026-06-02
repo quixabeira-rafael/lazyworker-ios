@@ -718,7 +718,7 @@ def ui_color(
     identifier: _Identifier = None,
     index: _Index = None,
     any_visibility: _AnyVis = False,
-    at: _At = None,
+    at: str | None = typer.Option(None, "--at", help="Sample the colour at a point: X,Y."),
     region: str | None = typer.Option(
         None, "--region", help="Read a region box instead of an element: X,Y,W,H (points)."
     ),
