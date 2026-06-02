@@ -10,7 +10,7 @@ from lazyworker.interaction.wait import (
     WaitSpec,
     _env_float,
     color_distance,
-    color_signature,
+    frame_features,
     settle_wait,
 )
 
@@ -84,15 +84,32 @@ def test_env_float_override_and_fallback(monkeypatch):
     assert _env_float("LAZYWORKER_SETTLE_ONSET", 1.0) == 1.0  # unset -> fallback
 
 
-def test_color_signature_is_per_tile_rgb():
+def _png(top_color, body_color, top_h=40, size=(200, 400)):
     Image = pytest.importorskip("PIL.Image")
     import io
 
+    img = Image.new("RGB", size, body_color)
+    img.paste(Image.new("RGB", (size[0], top_h), top_color), (0, 0))
     buf = io.BytesIO()
-    Image.new("RGB", (200, 400), (10, 20, 30)).save(buf, format="PNG")
-    sig = color_signature(buf.getvalue())
+    img.save(buf, format="PNG")
+    return buf.getvalue()
+
+
+def test_frame_features_signature_is_per_tile_rgb():
+    sig, fp = frame_features(_png((10, 20, 30), (10, 20, 30)))
     assert len(sig) == 16 * 16 * 3  # SETTLE_GRID tiles, 3 channels
     assert set(sig) == {10, 20, 30}  # a flat image collapses to its colour
+    assert isinstance(fp, str) and len(fp) == 40  # sha1 hex
+
+
+def test_frame_features_crop_ignores_status_bar_band():
+    # Two frames that differ ONLY in the top band (the "status bar"/clock).
+    a = _png(top_color=(0, 0, 0), body_color=(10, 20, 30), top_h=40)
+    b = _png(top_color=(255, 255, 255), body_color=(10, 20, 30), top_h=40)
+    # Without cropping, the band makes them differ (signature and fingerprint).
+    assert frame_features(a, 0) != frame_features(b, 0)
+    # Cropping the band away makes them identical on both signals.
+    assert frame_features(a, 40) == frame_features(b, 40)
 
 
 # --- instant: change then static -> settles ----------------------------------

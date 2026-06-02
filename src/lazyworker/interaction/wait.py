@@ -18,8 +18,6 @@ DEFAULT_TIMEOUT = 5.0
 DEFAULT_INTERVAL = 0.4
 DEFAULT_SETTLE = 2
 
-STATUS_BAR_FRACTION = 0.06  # crop the top band (clock/battery) before comparing
-
 
 def _env_float(name: str, default: float) -> float:
     raw = os.environ.get(name)
@@ -107,8 +105,13 @@ def tree_signature(node: AccessibilityNode) -> str:
     return hashlib.sha1("\n".join(parts).encode()).hexdigest()
 
 
-def color_signature(png: bytes) -> tuple[int, ...]:
-    """Per-tile mean RGB on a small grid (status bar cropped) for settle detection."""
+def frame_features(png: bytes, crop_top: int = 0) -> tuple[tuple[int, ...], str]:
+    """Decode the screenshot once and derive both settle signals from the body
+    below ``crop_top`` pixels (the status bar, so the clock never counts as motion):
+
+      - a per-tile mean-RGB signature on a small grid (magnitude posture),
+      - an exact hash of the cropped pixels (strict/identity posture).
+    """
     try:
         from PIL import Image
     except ImportError as exc:
@@ -118,10 +121,10 @@ def color_signature(png: bytes) -> tuple[int, ...]:
 
     image = Image.open(io.BytesIO(png)).convert("RGB")
     width, height = image.size
-    image = image.crop((0, int(height * STATUS_BAR_FRACTION), width, height)).resize(
-        (SETTLE_GRID, SETTLE_GRID), Image.BOX
-    )
-    return tuple(image.tobytes())
+    body = image.crop((0, min(crop_top, height), width, height))
+    fingerprint = hashlib.sha1(body.tobytes()).hexdigest()
+    signature = tuple(body.resize((SETTLE_GRID, SETTLE_GRID), Image.BOX).tobytes())
+    return signature, fingerprint
 
 
 def color_distance(a: tuple[int, ...], b: tuple[int, ...]) -> float:
@@ -129,11 +132,6 @@ def color_distance(a: tuple[int, ...], b: tuple[int, ...]) -> float:
     if not a or not b:
         return 0.0
     return sum(abs(x - y) for x, y in zip(a, b, strict=False)) / len(a)
-
-
-def fingerprint(png: bytes) -> str:
-    """Exact hash of raw screenshot bytes; identical frames => the screen did not move."""
-    return hashlib.sha1(png).hexdigest()
 
 
 class SettleOutcome(BaseModel):

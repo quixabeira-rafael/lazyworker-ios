@@ -67,6 +67,15 @@ def test_screenshot(httpx_mock: HTTPXMock) -> None:
     assert data == raw
 
 
+def test_screen_info(httpx_mock: HTTPXMock) -> None:
+    httpx_mock.add_response(
+        url=f"{BASE_URL}/session/S1/wda/screen",
+        json={"value": {"statusBarSize": {"width": 390, "height": 47}, "scale": 3}},
+    )
+    info = Session(WdaClient(BASE_URL), "S1").screen_info()
+    assert info["statusBarSize"]["height"] == 47 and info["scale"] == 3
+
+
 def test_tap_sends_w3c_pointer_actions(httpx_mock: HTTPXMock) -> None:
     httpx_mock.add_response(
         url=f"{BASE_URL}/session/S1/actions",

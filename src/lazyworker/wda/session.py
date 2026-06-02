@@ -35,6 +35,14 @@ class Session:
         except (binascii.Error, ValueError) as exc:
             raise WdaResponseError("WebDriverAgent returned an invalid screenshot") from exc
 
+    def screen_info(self) -> dict[str, Any]:
+        """Return device screen geometry: statusBarSize, scale and screenSize (points)."""
+        body = self._client.request("GET", f"/session/{self.id}/wda/screen")
+        value = self._client.value(body)
+        if not isinstance(value, dict):
+            raise WdaResponseError("WebDriverAgent returned invalid screen info")
+        return value
+
     def tap(self, x: int, y: int) -> None:
         self._perform_pointer(
             [

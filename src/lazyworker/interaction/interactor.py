@@ -23,8 +23,7 @@ from lazyworker.interaction.settings import (
 from lazyworker.interaction.state import load_session_state
 from lazyworker.interaction.wait import (
     WaitSpec,
-    color_signature,
-    fingerprint,
+    frame_features,
     settle_wait,
     tree_signature,
     wait_for,
@@ -73,6 +72,7 @@ class Interactor:
         self._session = session
         self._resolver = resolver or LocatorResolver()
         self._screen: Point | None = None
+        self._status_bar_crop: int | None = None
         self._sleep = sleep
         self._clock = clock
 
@@ -305,9 +305,19 @@ class Interactor:
             if wait.mode == WaitMode.TREE:
                 return tree_signature(self._session.source()), None
             png = self._session.screenshot()
-            return None, (color_signature(png), fingerprint(png))
+            return None, frame_features(png, self._crop_top())
         except (WdaConnectionError, WdaResponseError):
             return None, None
+
+    def _crop_top(self) -> int:
+        """Status-bar height in pixels for this device, measured once and reused."""
+        if self._status_bar_crop is None:
+            try:
+                info = self._session.screen_info()
+                self._status_bar_crop = round(info["statusBarSize"]["height"] * info["scale"])
+            except (WdaConnectionError, WdaResponseError, KeyError, TypeError):
+                self._status_bar_crop = 0
+        return self._status_bar_crop
 
     def _apply_wait(
         self,
@@ -388,12 +398,14 @@ class Interactor:
                 attempts=0, elapsed_s=0.0, verdict="no_change",
             )
 
+        crop = self._crop_top()
+
         def observe() -> tuple[tuple[int, ...], str]:
             try:
                 png = self._session.screenshot()
             except (WdaConnectionError, WdaResponseError):
                 return baseline
-            return color_signature(png), fingerprint(png)
+            return frame_features(png, crop)
 
         outcome = settle_wait(
             observe, baseline, spec=wait, sleep=self._sleep, clock=self._clock
