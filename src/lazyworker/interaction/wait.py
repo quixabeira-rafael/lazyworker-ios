@@ -3,6 +3,7 @@ from __future__ import annotations
 import hashlib
 import io
 import operator
+import os
 import time
 from collections.abc import Callable
 from typing import TypeVar
@@ -19,10 +20,23 @@ DEFAULT_SETTLE = 2
 
 STATUS_BAR_FRACTION = 0.06  # crop the top band (clock/battery) before comparing
 
+
+def _env_float(name: str, default: float) -> float:
+    raw = os.environ.get(name)
+    if raw is None:
+        return default
+    try:
+        return float(raw)
+    except ValueError:
+        return default
+
+
 # Settle detection: per-tile mean RGB on a small grid (sees equiluminant colour
 # changes that grayscale misses), plus exact-identity for the threshold-free path.
 SETTLE_GRID = 16
-SETTLE_ONSET = 1.0  # magnitude postures: mean per-tile colour delta to count as "moved"
+# magnitude postures: mean per-tile colour delta to count as "moved".
+# Default overridable via LAZYWORKER_SETTLE_ONSET (falls back to 1.0).
+SETTLE_ONSET = _env_float("LAZYWORKER_SETTLE_ONSET", 1.0)
 SETTLE_EPS_FRACTION = 0.5  # quiet threshold = onset * this (hysteresis)
 STRICT_ONSET_FLOOR = 0.5  # strict onset never drops below this (clean render => sigma 0)
 STRICT_BUSY_RATIO = 0.5  # fraction of churning frames (no onset) that reads as "busy"

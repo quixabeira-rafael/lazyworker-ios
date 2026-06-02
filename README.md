@@ -171,7 +171,8 @@ settles — otherwise it fails with `no_change` (exit `25`):
 - `--wait tree` — wait for a structural change in the accessibility tree.
 - `--wait settle` — wait for the screen to stop animating after the action (colour-aware,
   identity-based; reports `settled`/`busy`/`no_change`). Postures: `settle:magnitude` /
-  `settle:custom=<n>` use a colour-magnitude threshold instead.
+  `settle:custom=<n>` use a colour-magnitude threshold instead (the magnitude default is `1.0`,
+  overridable via the `LAZYWORKER_SETTLE_ONSET` env var).
 - `--wait-until key=value` / `--wait-gone key=value` — wait until a selector appears / disappears
   (keys: `type|label|name|value|identifier|id`, e.g. `--wait-until id=spinner`).
 - Tune with `--wait-timeout`, `--wait-settle` (stable polls required), `--wait-interval`.

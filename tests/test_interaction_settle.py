@@ -8,6 +8,7 @@ import pytest
 from lazyworker.interaction.models import SettleStrategy, WaitMode
 from lazyworker.interaction.wait import (
     WaitSpec,
+    _env_float,
     color_distance,
     color_signature,
     settle_wait,
@@ -72,6 +73,15 @@ STRATEGIES = [SettleStrategy.MAGNITUDE, SettleStrategy.STRICT]
 def test_color_distance_detects_equiluminant_change():
     # gray and a green of similar luminance still differ strongly in RGB
     assert color_distance(GRAY, GREEN) > 1.0
+
+
+def test_env_float_override_and_fallback(monkeypatch):
+    monkeypatch.setenv("LAZYWORKER_SETTLE_ONSET", "2.5")
+    assert _env_float("LAZYWORKER_SETTLE_ONSET", 1.0) == 2.5
+    monkeypatch.setenv("LAZYWORKER_SETTLE_ONSET", "not-a-number")
+    assert _env_float("LAZYWORKER_SETTLE_ONSET", 1.0) == 1.0  # invalid -> fallback
+    monkeypatch.delenv("LAZYWORKER_SETTLE_ONSET")
+    assert _env_float("LAZYWORKER_SETTLE_ONSET", 1.0) == 1.0  # unset -> fallback
 
 
 def test_color_signature_is_per_tile_rgb():
