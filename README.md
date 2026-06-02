@@ -57,6 +57,17 @@ pipx install '.[ocr]'      # Apple Vision OCR for `ui screen --ocr`
 pipx install '.[detect]'   # local visual UI detector for `ui screen --detect`
 ```
 
+### Claude skill
+
+Teach Claude Code how and when to drive an app with lazyworker by installing the skill (an editable
+install, so it tracks the repo):
+
+```bash
+lazyworker skill install     # symlink the skill into ~/.claude/skills/lazyworker
+lazyworker skill status      # show whether it's installed and where it points
+lazyworker skill uninstall   # remove the managed symlink
+```
+
 ## Quick start (simulator)
 
 ```bash

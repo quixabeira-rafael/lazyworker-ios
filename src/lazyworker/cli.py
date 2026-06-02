@@ -11,6 +11,7 @@ from typing import Annotated, NoReturn
 import typer
 from pydantic import ValidationError
 
+from lazyworker import claude_skill
 from lazyworker.bootstrap.errors import BootstrapError
 from lazyworker.bootstrap.service import BootstrapService
 from lazyworker.bootstrap.state import load_run_state
@@ -86,6 +87,30 @@ ui_app = typer.Typer(
     ),
 )
 app.add_typer(ui_app, name="ui")
+
+skill_app = typer.Typer(
+    no_args_is_help=True,
+    help="Manage the lazyworker Claude skill (install/status/uninstall the SKILL.md symlink).",
+)
+app.add_typer(skill_app, name="skill")
+
+
+@skill_app.command("install")
+def skill_install() -> None:
+    """Symlink the lazyworker skill into ~/.claude/skills (editable install)."""
+    typer.echo(json.dumps(claude_skill.install().to_dict(), indent=2))
+
+
+@skill_app.command("status")
+def skill_status() -> None:
+    """Show whether the lazyworker Claude skill is installed and where it points."""
+    typer.echo(json.dumps(claude_skill.status().to_dict(), indent=2))
+
+
+@skill_app.command("uninstall")
+def skill_uninstall() -> None:
+    """Remove the managed lazyworker skill symlink from ~/.claude/skills."""
+    typer.echo(json.dumps(claude_skill.uninstall().to_dict(), indent=2))
 
 
 def _base_url(override: str | None) -> str:
