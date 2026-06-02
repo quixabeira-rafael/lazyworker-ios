@@ -61,6 +61,24 @@ lazyworker ui find back --type Button          # add a type filter to narrow
 lazyworker ui find --identifier btn-primary    # exact field match (no free text)
 ```
 
+**Read the result with `--jq`, not an inline script.** Pass a jq expression (a bundled jq engine, run with `-r`, so no `jq` install is needed) to filter/map/reduce the JSON in place — strings come out raw, objects stay JSON:
+
+```bash
+lazyworker ui find button --jq '.count'                                   # how many
+lazyworker ui find button --jq '.matches[].label'                          # just the labels
+lazyworker ui find back   --jq '.matches[] | select(.type=="Button") | .identifier'   # ids of buttons
+lazyworker ui find chat   --jq '.matches[0].rect | "\(.x+.width/2|floor),\(.y+.height/2|floor)"'  # → feed to --at
+```
+
+So the loop is one line: `find … --jq` to pick the target, then act on it.
+
+`--jq` takes the whole jq *program* (so `select`/`map`/`reduce`/`test`/etc. all work) but exposes no jq *flags* and forces `-r`. When you need a flag — compact `-c`, sorted `-S`, variables `--arg`, slurp `-s`, or the quoted (non-raw) form — **pipe to your own `jq` CLI**; every command emits clean JSON for exactly that:
+
+```bash
+lazyworker ui find button | jq -c '[.matches[] | select(.type=="Button")]'   # -c compact
+lazyworker ui find button | jq --arg t Button '[.matches[]|select(.type==$t)]'  # --arg variable
+```
+
 Each match carries its `rect` and ready-to-copy **tips** (`--tips`, on by default) — e.g. the exact `ui tap --identifier …` to act on it. Use `find` when you don't yet know the selector; use `ui tree` only when you need the whole structure; use `ui screen` when you want a flattened, reading-order breakdown (and `--ocr`/`--detect` to recover text/elements that aren't in the accessibility tree — common in Flutter/canvas UIs).
 
 ## Act — tap, scroll, type

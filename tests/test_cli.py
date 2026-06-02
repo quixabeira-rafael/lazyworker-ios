@@ -8,7 +8,7 @@ import typer
 from pytest_httpx import HTTPXMock
 from typer.testing import CliRunner
 
-from lazyworker.cli import _attach_wait_artifact, _build_wait, _signing_options, app
+from lazyworker.cli import _apply_jq, _attach_wait_artifact, _build_wait, _signing_options, app
 from lazyworker.config import Config, SigningConfig, SigningMode
 from lazyworker.interaction.models import (
     Action,
@@ -194,6 +194,17 @@ def test_ui_screen_outputs_description(
     assert out.read_bytes() == b"\x89PNG\r\n"
 
 
+def test_ui_find_jq_filters_output(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path, httpx_mock: HTTPXMock
+) -> None:
+    _use_state_dir(monkeypatch, tmp_path)
+    _seed_session(tmp_path)
+    httpx_mock.add_response(url=f"{BASE}/source?format=json", json=_tree([BUTTON]))
+    result = runner.invoke(app, ["ui", "find", "login", "--jq", ".matches[].label"])
+    assert result.exit_code == 0
+    assert result.stdout.strip() == "Login"  # raw label, filtered by jq
+
+
 def test_build_wait_none() -> None:
     assert _build_wait(Action.TAP, None, None, None, 5.0, 2, 0.4) is None
 
@@ -241,6 +252,20 @@ def test_build_wait_invalid_predicate_exits() -> None:
 def test_build_wait_invalid_mode_exits() -> None:
     with pytest.raises(typer.Exit):
         _build_wait(Action.TAP, "nope", None, None, 5.0, 2, 0.4)
+
+
+def test_apply_jq_filters_and_raw_strings(capsys) -> None:
+    with pytest.raises(typer.Exit) as exc:
+        _apply_jq(Action.FIND, '{"count": 2, "matches": [{"label": "Menu"}]}', ".matches[].label")
+    assert exc.value.exit_code == 0
+    assert capsys.readouterr().out.strip() == "Menu"  # raw, no quotes (-r)
+
+
+def test_apply_jq_invalid_program_exits_nonzero(capsys) -> None:
+    with pytest.raises(typer.Exit) as exc:
+        _apply_jq(Action.FIND, "{}", "this is not valid |||")
+    assert exc.value.exit_code == 30  # invalid_target
+    assert "jq" in capsys.readouterr().out
 
 
 class _ShotInteractor:

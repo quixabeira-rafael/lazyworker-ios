@@ -22,6 +22,7 @@ from lazyworker.devices.registry import DeviceRegistry
 from lazyworker.devices.runner import CommandError
 from lazyworker.doctor.checks import build_default_context, build_report
 from lazyworker.doctor.render import format_report
+from lazyworker.interaction import jqengine
 from lazyworker.interaction.batch import Batch, BatchReport, BatchRunner
 from lazyworker.interaction.detect import DetectorUnavailable, detect
 from lazyworker.interaction.interactor import Interactor, build_interactor, open_session
@@ -384,6 +385,22 @@ def _emit(result: OperationResult) -> NoReturn:
     raise typer.Exit(code=0 if result.ok else exit_code_for(result.error_code))
 
 
+def _apply_jq(action: Action, json_text: str, expr: str) -> NoReturn:
+    """Filter a command's JSON output through the in-process jq engine.
+
+    Renders like ``jq -r``: string results come out raw (labels/ids without
+    quotes), other results stay JSON. An invalid program fails with exit 30.
+    """
+    try:
+        values = jqengine.evaluate(expr, json.loads(json_text))
+    except jqengine.JqError as exc:
+        _emit(OperationResult.failure(action, ErrorCode.INVALID_TARGET, f"jq: {exc}"))
+    rendered = jqengine.render(values)
+    if rendered:
+        typer.echo(rendered)
+    raise typer.Exit(code=0)
+
+
 def _attach_wait_artifact(
     interactor: Interactor, result: OperationResult, save: bool
 ) -> OperationResult:
@@ -678,6 +695,14 @@ def ui_find(
     tips: bool = typer.Option(
         True, "--tips/--no-tips", help="Include ready-to-copy example commands per result."
     ),
+    jq: str | None = typer.Option(
+        None,
+        "--jq",
+        help="Filter/map the JSON result with a jq expression (bundled engine). Common: "
+        "'.count' (how many) · '.matches[].label' (labels) · '.matches[].identifier' (ids) · "
+        "'.matches[] | select(.type==\"Button\") | .identifier' (ids of buttons) · "
+        "'.matches[0].rect' (first match's box) · '.matches[] | select(.label|test(\"X\";\"i\"))'.",
+    ),
     base_url: _UiBaseUrl = None,
 ) -> None:
     """Search the accessibility tree and return every matching element (read-only)."""
@@ -712,7 +737,10 @@ def ui_find(
         for node in matches
     ]
     result = SearchResult(count=len(found), matches=found)
-    typer.echo(result.model_dump_json(indent=2, exclude_none=True))
+    payload = result.model_dump_json(indent=2, exclude_none=True)
+    if jq is not None:
+        _apply_jq(Action.FIND, payload, jq)
+    typer.echo(payload)
 
 
 def _emit_color(result: ColorResult) -> NoReturn:

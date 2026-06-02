@@ -167,6 +167,19 @@ lazyworker ui find joilane --type Cell        # type as an extra filter
 lazyworker ui find --identifier btn-primary   # exact field match (no free text)
 ```
 
+Filter/map the result in place with `--jq <expr>` (via a bundled jq engine — no `jq` install
+needed — run with `-r`), instead of piping or writing a script:
+
+```bash
+lazyworker ui find button --jq '.count'                    # how many matched
+lazyworker ui find button --jq '.matches[].label'           # just the labels (raw)
+lazyworker ui find back --jq '.matches[] | select(.type=="Button") | .identifier'
+```
+
+`--jq` takes the whole jq program but forces `-r` and exposes no jq flags. When you need a flag
+(`-c`, `-S`, `--arg`, `-s`, …) or the quoted form, **pipe to your own `jq` CLI** instead — every
+command emits clean JSON: `lazyworker ui find button | jq -c '[.matches[] | select(.type=="Button")]'`.
+
 Each match carries **tips** — ready-to-copy commands tailored to the element (a `Button` → a
 `tap`, a `TextField` → a `type`, a `ScrollView` → `scroll`/`scroll-to`), using the best selector
 plus an unambiguous `--at` fallback. Use `--no-tips` for lean output.
