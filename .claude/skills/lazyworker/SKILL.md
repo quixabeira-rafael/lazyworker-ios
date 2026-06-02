@@ -51,12 +51,14 @@ If `ui …` returns exit `10` you skipped `ui open`; exit `11`/`12` mean WDA is 
 
 ## Observe — see before you act
 
-**`ui find` is your first move on any screen.** It's read-only and returns *every* match as data, so you discover what's tappable and how to address it. Free text alone matches a substring (case-insensitive) of label/name/value/identifier — no need to know the type:
+**`ui find` is your first move on any screen.** It's read-only and returns *every* match as data, so you discover what's tappable and how to address it. The query is **positional and forgiving**: a plain substring matched (case-insensitive, accent- and whitespace-insensitive) against the node's *type and every text field* — id, label, name, value. So you don't need the flag, the type, or the exact text:
 
 ```bash
-lazyworker ui find -q "Login"                 # anything whose text/id contains "Login"
-lazyworker ui find -q "Login" --type Button   # add a type filter to disambiguate
-lazyworker ui find --identifier btn-primary   # exact field match
+lazyworker ui find back                       # anything with "back" anywhere (id, label, …)
+lazyworker ui find menu                        # matches id "hamburger-menu-button" or label "Menu"
+lazyworker ui find button                      # match by type
+lazyworker ui find back --type Button          # add a type filter to narrow
+lazyworker ui find --identifier btn-primary    # exact field match (no free text)
 ```
 
 Each match carries its `rect` and ready-to-copy **tips** (`--tips`, on by default) — e.g. the exact `ui tap --identifier …` to act on it. Use `find` when you don't yet know the selector; use `ui tree` only when you need the whole structure; use `ui screen` when you want a flattened, reading-order breakdown (and `--ocr`/`--detect` to recover text/elements that aren't in the accessibility tree — common in Flutter/canvas UIs).

@@ -660,11 +660,13 @@ def ui_tree(base_url: _UiBaseUrl = None) -> None:
 
 @ui_app.command("find")
 def ui_find(
-    query: str | None = typer.Option(
+    query: str | None = typer.Argument(
         None,
-        "--query",
-        "-q",
-        help="Free text matched (substring, case-insensitive) against label/name/value/identifier.",
+        help="Free text matched against type and every text field (substring, "
+        "case-insensitive, accent- and whitespace-insensitive). E.g. `ui find back`.",
+    ),
+    query_opt: str | None = typer.Option(
+        None, "--query", "-q", help="Same as the positional query."
     ),
     type_: _Type = None,
     label: _Label = None,
@@ -679,10 +681,11 @@ def ui_find(
     base_url: _UiBaseUrl = None,
 ) -> None:
     """Search the accessibility tree and return every matching element (read-only)."""
+    query = query if query is not None else query_opt
     if query is None and not any(v is not None for v in (type_, label, name, value, identifier)):
         _emit(
             OperationResult.failure(
-                Action.FIND, ErrorCode.INVALID_TARGET, "provide --query or at least one selector"
+                Action.FIND, ErrorCode.INVALID_TARGET, "provide a query or at least one selector"
             )
         )
     interactor = _interactor(base_url)

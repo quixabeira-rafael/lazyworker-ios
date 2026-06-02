@@ -41,6 +41,32 @@ def test_query_matches_identifier() -> None:
     assert [n.label for n in matches] == ["Joilane Silva"]
 
 
+def test_query_matches_type() -> None:
+    # `ui find button` finds buttons even with no text filter
+    matches = search_tree(_tree([_CELL_A, _BTN]), query="button")
+    assert [n.type for n in matches] == ["Button"]
+
+
+def test_query_is_accent_insensitive() -> None:
+    tree = _tree([{"type": "Button", "label": "Começar", "isVisible": True}])
+    assert len(search_tree(tree, query="comecar")) == 1
+    assert len(search_tree(tree, query="COMEÇAR")) == 1
+
+
+def test_query_collapses_whitespace_and_newlines() -> None:
+    # a multi-line composite label (common in Flutter cards) still matches
+    card = {"type": "Button", "label": "RapCaviar\nVarious Artists", "isVisible": True}
+    assert len(search_tree(_tree([card]), query="rapcaviar various")) == 1
+
+
+def test_query_matches_substring_in_identifier_or_label() -> None:
+    node = {"type": "Button", "label": "Menu", "identifier": "hamburger-menu-button",
+            "isVisible": True}
+    # the same query hits whether the term lives in the label or the id
+    assert len(search_tree(_tree([node]), query="hamburger")) == 1
+    assert len(search_tree(_tree([node]), query="menu")) == 1
+
+
 def test_excludes_hidden_by_default() -> None:
     tree = _tree([_BTN, _HIDDEN])
     assert [n.label for n in search_tree(tree, query="joilane")] == ["Joilane"]

@@ -1,11 +1,29 @@
 from __future__ import annotations
 
+import unicodedata
+
 from lazyworker.interaction.models import Tip
 from lazyworker.wda.models import AccessibilityNode
 
 TEXT_INPUT = {"TextField", "SecureTextField", "SearchField", "TextView"}
 SCROLLABLE = {"ScrollView", "Table", "CollectionView", "WebView"}
 NON_ACTIONABLE = {"Application", "Window"}
+
+
+def _normalize(text: str) -> str:
+    """Lower-case, strip accents and collapse whitespace (incl. newlines).
+
+    Makes the free-text query forgiving: 'comecar' matches 'Começar' and a query
+    matches across an element's multi-line label."""
+    decomposed = unicodedata.normalize("NFKD", text)
+    folded = "".join(c for c in decomposed if not unicodedata.combining(c))
+    return " ".join(folded.lower().split())
+
+
+def _haystack(node: AccessibilityNode) -> str:
+    """All searchable text of a node — type plus every text field — normalized."""
+    fields = (node.type, node.label, node.name, node.value, node.identifier)
+    return _normalize(" ".join(field for field in fields if field))
 
 
 def search_tree(
@@ -22,11 +40,13 @@ def search_tree(
 ) -> list[AccessibilityNode]:
     """Every node matching the field filters (exact) and the free-text ``query``.
 
-    ``query`` is a case-insensitive substring tested against label/name/value/identifier, so a
-    search needs no type and no exact field — the field selectors are optional extra filters
-    combined with AND. Hidden nodes (``visible is False``) are skipped unless ``include_hidden``.
+    ``query`` is a forgiving substring (case-insensitive, accent-folded, whitespace-collapsed)
+    tested against the node's type and every text field (label/name/value/identifier), so a
+    plain ``find back`` matches "Back" whether it sits in the id, the label, anywhere. The field
+    selectors are optional exact extra filters combined with AND. Hidden nodes (``visible is
+    False``) are skipped unless ``include_hidden``.
     """
-    needle = query.lower() if query else None
+    needle = _normalize(query) if query else None
     results: list[AccessibilityNode] = []
     for current in node.walk():
         if not include_hidden and current.visible is False:
@@ -41,14 +61,8 @@ def search_tree(
             continue
         if identifier is not None and current.identifier != identifier:
             continue
-        if needle is not None:
-            haystack = " ".join(
-                field
-                for field in (current.label, current.name, current.value, current.identifier)
-                if field
-            ).lower()
-            if needle not in haystack:
-                continue
+        if needle is not None and needle not in _haystack(current):
+            continue
         results.append(current)
         if limit is not None and len(results) >= limit:
             break

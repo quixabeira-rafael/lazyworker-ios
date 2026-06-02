@@ -128,7 +128,7 @@ code so an agent can branch on `$?`.
 | `ui open BUNDLE_ID` | Open an app, create a tuned session, and persist it (`--reuse/--no-reuse`, `--snapshot-max-depth`, `--snapshot-timeout`, `--wait-for-quiescence`). |
 | `ui close` | Close the active app session. |
 | `ui tree` | Print the current accessibility tree (session-tuned snapshot). |
-| `ui find` | Search the tree (read-only); return every element matching a free-text query and/or selectors. |
+| `ui find [query]` | Search the tree (read-only); a forgiving positional substring across type + all text fields, plus optional exact selectors. |
 | `ui color` | Read background and text colour of an element, a point (`--at X,Y`) or a region (`--region X,Y,W,H`); `--text`/`--background` narrow, `--palette` lists colours present (for a `contains` check). Returns colours as data; assertions are the caller's job. |
 | `ui tap` | Tap an element (by selector) or a coordinate. |
 | `ui double-tap` | Double-tap an element or a coordinate. |
@@ -156,13 +156,15 @@ Ambiguity is returned as data, not a blind error:
   "candidates": [ { "type": "Button", "label": "Save" }, { "type": "StaticText", "label": "Save" } ] }
 ```
 
-**Search.** `ui find` is read-only and returns *every* match — free text alone (no type needed),
-with selectors as optional extra filters:
+**Search.** `ui find` is read-only and returns *every* match. The query is positional and
+forgiving — a substring matched (case-, accent- and whitespace-insensitive) against the node's
+type and every text field (label/name/value/identifier). Selectors are optional exact filters:
 
 ```bash
-lazyworker ui find -q "joilane"               # any element whose text/id contains "joilane"
-lazyworker ui find -q "joilane" --type Cell   # type as an extra filter
-lazyworker ui find --identifier btn-primary   # exact field match
+lazyworker ui find back                       # anything with "back" in any field (id, label, …)
+lazyworker ui find menu                        # matches id "hamburger-menu-button" or label "Menu"
+lazyworker ui find joilane --type Cell        # type as an extra filter
+lazyworker ui find --identifier btn-primary   # exact field match (no free text)
 ```
 
 Each match carries **tips** — ready-to-copy commands tailored to the element (a `Button` → a
