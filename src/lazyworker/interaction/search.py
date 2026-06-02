@@ -1,7 +1,9 @@
 from __future__ import annotations
 
+import json
 import unicodedata
 
+from lazyworker.interaction import jqengine
 from lazyworker.interaction.models import Tip
 from lazyworker.wda.models import AccessibilityNode
 
@@ -26,6 +28,41 @@ def _haystack(node: AccessibilityNode) -> str:
     return _normalize(" ".join(field for field in fields if field))
 
 
+def _search_program(
+    *,
+    query: str | None,
+    type: str | None,
+    label: str | None,
+    name: str | None,
+    value: str | None,
+    identifier: str | None,
+    include_hidden: bool,
+    limit: int | None,
+) -> str:
+    """Build the jq program that filters the flattened node list down to indices.
+
+    The matching lives entirely in jq; Python only supplies the normalized ``_q``
+    haystack (accent folding is the one thing jq cannot do) and the node index.
+    Values are embedded as JSON literals, so they are quoted safely.
+    """
+    selects: list[str] = []
+    if not include_hidden:
+        selects.append("select(.visible != false)")
+    for field, value_ in (
+        ("type", type), ("label", label), ("name", name),
+        ("value", value), ("identifier", identifier),
+    ):
+        if value_ is not None:
+            selects.append(f"select(.{field} == {json.dumps(value_)})")
+    needle = _normalize(query) if query else ""
+    if needle:
+        selects.append(f"select(._q | contains({json.dumps(needle)}))")
+    program = "[ .[]" + "".join(f" | {clause}" for clause in selects) + " | ._i ]"
+    if limit is not None:
+        program += f" | .[0:{limit}]"
+    return program + " | .[]"
+
+
 def search_tree(
     node: AccessibilityNode,
     *,
@@ -45,28 +82,31 @@ def search_tree(
     plain ``find back`` matches "Back" whether it sits in the id, the label, anywhere. The field
     selectors are optional exact extra filters combined with AND. Hidden nodes (``visible is
     False``) are skipped unless ``include_hidden``.
+
+    The filtering runs in jq: each node is projected to its searchable fields plus a normalized
+    ``_q`` haystack and its index ``_i``, jq selects the matching indices, and those map back to
+    the original nodes (in tree order).
     """
-    needle = _normalize(query) if query else None
-    results: list[AccessibilityNode] = []
-    for current in node.walk():
-        if not include_hidden and current.visible is False:
-            continue
-        if type is not None and current.type != type:
-            continue
-        if label is not None and current.label != label:
-            continue
-        if name is not None and current.name != name:
-            continue
-        if value is not None and current.value != value:
-            continue
-        if identifier is not None and current.identifier != identifier:
-            continue
-        if needle is not None and needle not in _haystack(current):
-            continue
-        results.append(current)
-        if limit is not None and len(results) >= limit:
-            break
-    return results
+    nodes = list(node.walk())
+    payload = [
+        {
+            "type": current.type,
+            "label": current.label,
+            "name": current.name,
+            "value": current.value,
+            "identifier": current.identifier,
+            "visible": current.visible,
+            "_q": _haystack(current),
+            "_i": index,
+        }
+        for index, current in enumerate(nodes)
+    ]
+    program = _search_program(
+        query=query, type=type, label=label, name=name, value=value,
+        identifier=identifier, include_hidden=include_hidden, limit=limit,
+    )
+    indices = jqengine.evaluate(program, payload)
+    return [nodes[index] for index in indices if isinstance(index, int)]
 
 
 def _quote(text: str) -> str:
