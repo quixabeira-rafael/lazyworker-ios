@@ -203,6 +203,26 @@ class ExplorerDB:
                         "command": f'lazyworker ui {t["action"]["gesture"]} {addressing}{wflag}'.strip()})
         return out
 
+    def batch_ops(self, from_id: str, to_id: str):
+        """Compile the path into a single ordered `ui batch` op list — MECHANICAL replay,
+        no per-step reasoning. A defensive scroll_to precedes each selector tap (cheap when
+        the element is already visible)."""
+        path = self.shortest_path(from_id, to_id)
+        if path is None:
+            return None
+        ops = []
+        for t in path:
+            a = t["action"]
+            sel = a.get("selector") or {}
+            gesture = a["gesture"]
+            if sel and gesture in ("tap", "double_tap", "long_press", "type"):
+                ops.append({"op": "scroll_to", **sel})
+            op = {"op": gesture, **sel}
+            if gesture == "type":
+                op["text"] = (a.get("params") or {}).get("text", "")
+            ops.append(op)
+        return ops
+
     def verify(self, from_id: str, action_label: str, observation: dict) -> dict:
         """Contextual (filtered) verification → the unexpected-result signal."""
         fo = features(observation)
