@@ -161,6 +161,48 @@ class ExplorerDB:
             "reliability": {"confirmations": 1, "failures": 0},
         })
 
+    def shortest_path(self, from_id: str, to_id: str):
+        """Fewest-hop path of transitions from one state to another (BFS), or None."""
+        from collections import deque
+        if from_id == to_id:
+            return []
+        adj: dict[str, list] = {}
+        for t in self.data["transitions"]:
+            adj.setdefault(t["from"], []).append(t)
+        seen = {from_id}
+        queue = deque([(from_id, [])])
+        while queue:
+            cur, path = queue.popleft()
+            for t in sorted(adj.get(cur, []), key=lambda e: -e["reliability"]["confirmations"]):
+                if t["to"] in seen:
+                    continue
+                step = path + [t]
+                if t["to"] == to_id:
+                    return step
+                seen.add(t["to"])
+                queue.append((t["to"], step))
+        return None
+
+    def plan(self, from_id: str, to_id: str):
+        """A replayable command sequence to reach `to_id` from `from_id` (or None)."""
+        path = self.shortest_path(from_id, to_id)
+        if path is None:
+            return None
+        out = []
+        for t in path:
+            sel = t["action"].get("selector") or {}
+            addressing = " ".join(f'--{k} "{v}"' for k, v in sel.items())
+            wait = t.get("wait") or {}
+            wflag = ""
+            if wait.get("mode") in ("until", "gone") and wait.get("predicate"):
+                p = wait["predicate"]
+                wflag = f' --wait-{wait["mode"]} "{p["key"]}={p["value"]}"'
+            elif wait.get("mode"):
+                wflag = f' --wait {wait["mode"]}'
+            out.append({"to": t["to"],
+                        "command": f'lazyworker ui {t["action"]["gesture"]} {addressing}{wflag}'.strip()})
+        return out
+
     def verify(self, from_id: str, action_label: str, observation: dict) -> dict:
         """Contextual (filtered) verification → the unexpected-result signal."""
         fo = features(observation)
