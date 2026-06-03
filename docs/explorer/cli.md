@@ -43,42 +43,42 @@ Describe the input contract. Read-only, no session needed.
 
 | Form | Output |
 |---|---|
-| `explorer schema` | Human-readable: `YOU PROVIDE` (notes + canonical keys + rules) vs `CAPTURED FOR YOU` (screen_id, tree, screenshot, app_commit, provenance). |
+| `explorer schema` | Human-readable: `YOU PROVIDE` (notes + canonical keys + rules) vs `CAPTURED FOR YOU` (state_id, tree, screenshot, app_commit, scale, readiness, provenance). |
 | `explorer schema --json` | JSON Schema of `ScreenAnnotationInput`, descriptions included. |
 | `explorer schema --example` | A concrete, fillable example JSON to copy and edit. |
 
 ### `explorer record`
 
-Capture the current screen from the active session, attach optional authored notes,
+Capture the current state from the active session, attach optional authored notes,
 validate, persist, and return the stored record. Needs an active session (`ui open`).
 
 - **Input** (optional): authored fields as JSON via stdin or `--file`, same idiom as
   `ui batch`. With no input, it records the raw observation and the agent annotates later.
-- **Captured by the tool**: tree, screenshot, app `HEAD` SHA, screen size, provenance,
-  and the `screen_id` (newly assigned, or matched to an existing screen).
-- **Output**: JSON with `ok`, `screen_id`, `matched` (new vs matched existing),
+- **Captured by the tool**: tree, screenshot, app `HEAD` SHA, screen size + scale,
+  provenance, and the `state_id` (newly assigned, or matched to an existing state).
+- **Output**: JSON with `ok`, `state_id`, `matched` (new vs matched existing),
   a `captured` summary, the stored `notes`, and a `hint` for the next step.
 
 ```jsonc
 // echo '{"notes":{"summary":"Login screen. Email + password."}}' | lazyworker explorer record
 {
   "ok": true,
-  "screen_id": "scr_0007",
+  "state_id": "st_0007",
   "matched": false,
   "captured": { "app_commit": "1bb1c51", "screen_size": [393, 852], "elements": 12 },
   "notes": { "summary": "Login screen. Email + password." },
-  "hint": "annotate later: lazyworker explorer annotate scr_0007"
+  "hint": "annotate later: lazyworker explorer annotate st_0007"
 }
 ```
 
-### `explorer annotate <screen_id>`
+### `explorer annotate <state_id>`
 
-Add or update authored notes on a screen that already exists. Authoring after the
+Add or update authored notes on a state that already exists. Authoring after the
 fact, separate from capture.
 
 - **Input**: `notes` JSON via stdin or `--file`. Keys are merged into the existing
   `notes` map (a section is updated by re-sending its key).
-- **Output**: the updated `notes` and `screen_id`.
+- **Output**: the updated `notes` and `state_id`.
 
 ## Exit codes
 

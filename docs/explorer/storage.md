@@ -2,7 +2,7 @@
 
 How the knowledge store is persisted. This is the substrate every layer rests on.
 It complements [`atom.md`](atom.md) (the screen record body) and is referenced by
-the graph layer (nodes/edges) and the change/repair layers (evidence queue).
+the graph (states/transitions) and the deferred change/repair layer.
 
 ## Decisions
 
@@ -23,11 +23,11 @@ is best served by SQLite:
 
 | Need | How SQLite serves it |
 |---|---|
-| Fast shortest-path queries | Indexed `edges` table + recursive CTE, no full re-parse |
+| Fast shortest-path queries | Indexed `transitions` table + recursive CTE, no full re-parse |
 | Easy backup | A single file (screenshots as BLOB → truly atomic) |
 | Long-term efficiency | Indexes scale; no growing JSON to re-parse each call |
 | Zero new dependency | `sqlite3` is in the Python standard library |
-| Repair as a transaction | A screen and its edges update atomically |
+| Repair as a transaction | A state and its transitions update atomically |
 | Producer/consumer queue | Transactional enqueue/dequeue for the daemon seam |
 
 A graph database (server or embedded) is overkill: the graph is small, the query
@@ -62,50 +62,47 @@ record. The SHA is a column, so the trick works unchanged with a local database.
 Per-layer column details are defined in each layer's doc; this fixes the structure.
 
 ```sql
--- Source of truth: one row per screen.
-CREATE TABLE screens (
-  screen_id      TEXT PRIMARY KEY,   -- opaque, stable handle (scr_0001)
+-- The atom. Source of truth: one row per state. See atom.md.
+CREATE TABLE states (
+  state_id       TEXT PRIMARY KEY,   -- opaque, stable handle (st_0001)
   bundle_id      TEXT NOT NULL,
   schema_version INTEGER NOT NULL,
   tree           TEXT NOT NULL,      -- raw AccessibilityNode (JSON) = source of truth
   notes          TEXT,               -- authored map (JSON), json_extract-able
-  provenance     TEXT NOT NULL,      -- {learned_at, last_confirmed_at, last_modified_at}
+  readiness      TEXT,               -- "arrived & ready" condition (JSON, no timeout)
+  provenance     TEXT NOT NULL,      -- {learned, last_confirmed, last_modified} = commit SHAs
   captured_at    TEXT NOT NULL,      -- reference capture time (ISO 8601, UTC)
   app_commit     TEXT,               -- app HEAD SHA at capture (null if not in git)
   screen_w       INTEGER,
   screen_h       INTEGER,
+  scale          REAL,               -- density (px/pt) — coordinate recomputability
   screenshot     BLOB                -- reference PNG, in-db for atomic backup
 );
 
--- Directed multigraph. A surrogate key allows parallel edges between the same pair.
-CREATE TABLE edges (
-  edge_id     INTEGER PRIMARY KEY,
-  from_id     TEXT NOT NULL REFERENCES screens(screen_id),
-  to_id       TEXT NOT NULL REFERENCES screens(screen_id),
-  action      TEXT NOT NULL,         -- {gesture, selector, input?} -- replayable
-  reliability TEXT,                  -- Layer 4 detail
-  provenance  TEXT
+-- The relation. Directed multigraph; surrogate key allows parallel edges; from==to is
+-- a self-transition (in-place state change). See transitions.md.
+CREATE TABLE transitions (
+  transition_id INTEGER PRIMARY KEY,
+  from_id       TEXT NOT NULL REFERENCES states(state_id),
+  to_id         TEXT NOT NULL REFERENCES states(state_id),
+  action        TEXT NOT NULL,       -- {gesture, target:{selector,at}, params} -- replayable
+  wait          TEXT,                -- wait strategy (JSON, no timeout; inherits to_state.readiness)
+  kind          TEXT,                -- navigation | in_place | noop
+  reliability   TEXT,                -- {confirmations, failures, last_confirmed}
+  provenance    TEXT
 );
-CREATE INDEX edges_from ON edges(from_id);   -- adjacency (out-edges)
-CREATE INDEX edges_to   ON edges(to_id);     -- reverse adjacency (how to reach X)
-
--- Repair-request queue carrying frozen evidence (the daemon seam, Layer 5).
-CREATE TABLE evidence (
-  evidence_id        INTEGER PRIMARY KEY,
-  expected_screen_id TEXT,                   -- what the map predicted
-  observed_tree      TEXT NOT NULL,          -- frozen diverging snapshot (JSON)
-  observed_shot      BLOB,                   -- frozen screenshot at detection
-  action             TEXT,                   -- what was done, from where, at what confidence
-  created_at         TEXT NOT NULL,
-  app_commit         TEXT,
-  status             TEXT NOT NULL           -- pending | done
-);
+CREATE INDEX tr_from ON transitions(from_id);   -- adjacency (out-edges)
+CREATE INDEX tr_to   ON transitions(to_id);     -- reverse adjacency (how to reach X)
 ```
+
+The **repair/evidence layer is deferred** — self-correction is too early to model
+before the map is being built and read in practice. When it lands it adds an
+`evidence` table (frozen before/action/after) as the daemon's producer/consumer seam.
 
 ## Graph model (recap)
 
-A **directed multigraph**: nodes are screens (opaque ids), edges are directed and
-carry the replayable **action**. "Go and come back" is two distinct edges (the back
-action is its own learned edge); cycles are handled by a visited-set during
-traversal. Shortest path is computed by a recursive CTE over `edges`, preferring
-reliable edges. Details in the graph layer doc.
+A **directed multigraph**: nodes are states (opaque ids), transitions are directed
+and carry `<action, wait>`. "Go and come back" is two distinct transitions; an
+in-place change is a self-transition (`from == to`); cycles are handled by a
+visited-set during traversal. Shortest path is computed by a recursive CTE over
+`transitions`, preferring reliable ones.
