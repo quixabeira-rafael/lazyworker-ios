@@ -1,0 +1,131 @@
+{
+  "schema_version": 1,
+  "next_id": 3,
+  "states": {
+    "st_0001": {
+      "state_id": "st_0001",
+      "schema_version": 1,
+      "reference": {
+        "tree": {
+          "type": "Window",
+          "visible": true,
+          "children": [
+            {
+              "type": "NavigationBar",
+              "visible": true,
+              "label": "Sign in"
+            },
+            {
+              "type": "TextField",
+              "visible": true,
+              "identifier": "email_field",
+              "label": "Email"
+            },
+            {
+              "type": "SecureTextField",
+              "visible": true,
+              "identifier": "password_field",
+              "label": "Password"
+            },
+            {
+              "type": "Switch",
+              "visible": true,
+              "identifier": "remember_me",
+              "label": "Remember me",
+              "value": "0"
+            },
+            {
+              "type": "Button",
+              "visible": true,
+              "identifier": "login_button",
+              "label": "Continue"
+            }
+          ]
+        },
+        "app_commit": "c0ffee1"
+      },
+      "notes": {
+        "summary": "Login screen."
+      },
+      "provenance": {
+        "learned": "c0ffee1",
+        "last_confirmed": "c0ffee1",
+        "last_modified": "c0ffee1"
+      }
+    },
+    "st_0002": {
+      "state_id": "st_0002",
+      "schema_version": 1,
+      "reference": {
+        "tree": {
+          "type": "Window",
+          "visible": true,
+          "children": [
+            {
+              "type": "NavigationBar",
+              "visible": true,
+              "label": "Home"
+            },
+            {
+              "type": "StaticText",
+              "visible": true,
+              "label": "Welcome back"
+            },
+            {
+              "type": "Cell",
+              "visible": true,
+              "identifier": "card_steps",
+              "label": "Steps"
+            },
+            {
+              "type": "Cell",
+              "visible": true,
+              "identifier": "card_water",
+              "label": "Water"
+            },
+            {
+              "type": "Button",
+              "visible": true,
+              "identifier": "profile_button",
+              "label": "Profile"
+            }
+          ]
+        },
+        "app_commit": "c0ffee1"
+      },
+      "notes": {
+        "summary": "Home dashboard."
+      },
+      "provenance": {
+        "learned": "c0ffee1",
+        "last_confirmed": "c0ffee1",
+        "last_modified": "c0ffee1"
+      }
+    }
+  },
+  "transitions": [
+    {
+      "from": "st_0001",
+      "to": "st_0002",
+      "action": {
+        "label": "tap login_button",
+        "gesture": "tap",
+        "selector": {
+          "identifier": "login_button"
+        }
+      },
+      "wait": {
+        "mode": "until",
+        "predicate": {
+          "key": "identifier",
+          "value": "card_steps"
+        }
+      },
+      "kind": "navigation",
+      "reliability": {
+        "confirmations": 1,
+        "failures": 0
+      }
+    }
+  ]
+}
