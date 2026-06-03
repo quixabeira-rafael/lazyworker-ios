@@ -81,3 +81,17 @@ relaunch, identity-driven:
 
 This is the cold/discovery half of the loop; warm replay then navigates the learned
 graph by stored coordinate + `--wait-until` verification — fast and source-free.
+
+## idb operational notes (learned at the workbench)
+
+- **idb returns the full list in one read, with viewport-relative coordinates** —
+  off-screen rows have `y > screen_height` (or negative after scrolling up). So a
+  single `describe-all` tells you every element exists, but only those with
+  `0 < y < screen_height` are tappable right now.
+- **`idb ui swipe` needs a `--duration`** to actually scroll. An instant (no-duration)
+  swipe is a flick/no-op that does not move a list — this was the bug that made deep
+  rows unreachable. A real drag (`--duration 0.6`) scrolls; the off-screen rows then
+  move into the tappable viewport. A long menu typically covers in a couple of drag
+  positions (it bottoms out — further drags don't change the coordinates).
+- Consequence for scroll-to-find: drag with a duration, re-read, and tap a target once
+  its `y` falls in `[~90, screen_height]`.
