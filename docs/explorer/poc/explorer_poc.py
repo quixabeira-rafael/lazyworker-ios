@@ -122,11 +122,15 @@ class ExplorerDB:
         feats = [features(s["reference"]["tree"]) for s in self.data["states"].values()]
         feats += extra or []
         n = max(len(feats), 1)
-        default = math.log(n + 1)
+        # Smoothed IDF: down-weights omnipresent tokens (chrome) but never zeroes them,
+        # so a token present in every state of a SMALL corpus is not discarded as if it
+        # were chrome (the "default high IDF, never 0" principle). An unseen token gets
+        # the highest weight (df treated as 0).
+        default = math.log((n + 1) / 1) + 1
         df = Counter(i for f in feats for i in f["ids"])
         tdf = Counter(t for f in feats for t in f["text"])
-        idf = {i: math.log(n / df[i]) if df[i] < n else 0.0 for i in df}
-        tidf = {t: math.log(n / tdf[t]) if tdf[t] < n else 0.0 for t in tdf}
+        idf = {i: math.log((n + 1) / (df[i] + 1)) + 1 for i in df}
+        tidf = {t: math.log((n + 1) / (tdf[t] + 1)) + 1 for t in tdf}
         return idf, tidf, default
 
     def match(self, observation: dict):
@@ -160,6 +164,66 @@ class ExplorerDB:
             "wait": wait, "kind": kind,
             "reliability": {"confirmations": 1, "failures": 0},
         })
+
+    def outgoing(self, state_id: str):
+        """Every transition leaving `state_id` — the actions possible from this state."""
+        return [t for t in self.data["transitions"] if t["from"] == state_id]
+
+    def actions_here(self, observation: dict):
+        """Identify the live screen, then return its known outgoing actions.
+
+        Returns {state_id, score, matched, actions:[{to, label, gesture, selector, kind}]}.
+        """
+        best_id, best = self.match(observation)
+        matched = best >= SAME
+        actions = []
+        if matched:
+            for t in self.outgoing(best_id):
+                a = t["action"]
+                actions.append({
+                    "to": t["to"], "label": a.get("label"), "gesture": a.get("gesture"),
+                    "selector": a.get("selector"), "kind": t.get("kind"),
+                    "leads_to": (self.data["states"].get(t["to"], {}).get("notes") or {}).get("summary"),
+                })
+        return {"state_id": best_id if matched else None, "score": round(best, 2),
+                "matched": matched, "actions": actions}
+
+    def state_actions(self, observation: dict):
+        """The actions available from the current state, derived from the OBSERVATION
+        itself (every interactable element is a possible action) and ENRICHED with what
+        we have learned (where an action leads). No screenshot, no map required.
+
+        Identity is best-effort (a retrieval key for the learned overlay), never a gate:
+        the action list is returned even for a brand-new, never-seen state.
+        """
+        best_id, best = self.match(observation)
+        known = best_id if best >= SAME else None
+        learned = {}
+        if known:
+            for t in self.outgoing(known):
+                ident = (t["action"].get("selector") or {}).get("identifier")
+                if ident:
+                    learned[ident] = t
+        actions = []
+        for n in _walk(observation):
+            if n.get("type") not in INTERACTIVE or not n.get("visible", True):
+                continue
+            ident = n.get("identifier")
+            label = _norm(n.get("label") or n.get("value") or n.get("name") or "")
+            selector = {"identifier": ident} if ident else (
+                {"type": n.get("type"), "label": n.get("label")} if n.get("label") else None)
+            if selector is None:
+                continue
+            edge = learned.get(ident) if ident else None
+            actions.append({
+                "label": label, "type": n.get("type"),
+                "selector": selector,
+                "gesture": "tap",
+                "leads_to": edge["to"] if edge else None,
+                "learned": edge is not None,
+            })
+        return {"state_id": known, "score": round(best, 2), "known": known is not None,
+                "action_count": len(actions), "actions": actions}
 
     def shortest_path(self, from_id: str, to_id: str):
         """Fewest-hop path of transitions from one state to another (BFS), or None."""
