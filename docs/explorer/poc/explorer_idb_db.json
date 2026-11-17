@@ -1,0 +1,1866 @@
+{
+  "schema_version": 1,
+  "next_id": 4,
+  "states": {
+    "st_0001": {
+      "state_id": "st_0001",
+      "schema_version": 1,
+      "reference": {
+        "tree": {
+          "type": "Application",
+          "identifier": null,
+          "label": null,
+          "value": null,
+          "visible": true,
+          "children": [
+            {
+              "type": "Application",
+              "identifier": null,
+              "label": "WeightWatchers",
+              "value": null,
+              "name": "WeightWatchers",
+              "rect": {
+                "x": 0,
+                "y": 0,
+                "width": 402,
+                "height": 874
+              },
+              "visible": true,
+              "children": []
+            },
+            {
+              "type": "Group",
+              "identifier": "Home",
+              "label": null,
+              "value": null,
+              "name": null,
+              "rect": {
+                "x": 0,
+                "y": 56.33333333333334,
+                "width": 402,
+                "height": 44
+              },
+              "visible": true,
+              "children": []
+            },
+            {
+              "type": "Button",
+              "identifier": null,
+              "label": "Tuesday, June 2, 2026",
+              "value": null,
+              "name": "Tuesday, June 2, 2026",
+              "rect": {
+                "x": 73,
+                "y": 128.66666666666666,
+                "width": 48,
+                "height": 55.333333333333314
+              },
+              "visible": true,
+              "children": []
+            },
+            {
+              "type": "Button",
+              "identifier": null,
+              "label": "Wednesday, June 3, 2026",
+              "value": null,
+              "name": "Wednesday, June 3, 2026",
+              "rect": {
+                "x": 125,
+                "y": 128.66666666666666,
+                "width": 48,
+                "height": 55.333333333333314
+              },
+              "visible": true,
+              "children": []
+            },
+            {
+              "type": "Button",
+              "identifier": null,
+              "label": "Thursday, June 4, 2026",
+              "value": null,
+              "name": "Thursday, June 4, 2026",
+              "rect": {
+                "x": 175.75,
+                "y": 127.41666412353516,
+                "width": 50.5,
+                "height": 57.833335876464844
+              },
+              "visible": true,
+              "children": []
+            },
+            {
+              "type": "Button",
+              "identifier": null,
+              "label": "Friday, June 5, 2026",
+              "value": null,
+              "name": "Friday, June 5, 2026",
+              "rect": {
+                "x": 229,
+                "y": 128.66666666666666,
+                "width": 48,
+                "height": 55.333333333333314
+              },
+              "visible": true,
+              "children": []
+            },
+            {
+              "type": "Button",
+              "identifier": null,
+              "label": "Saturday, June 6, 2026",
+              "value": null,
+              "name": "Saturday, June 6, 2026",
+              "rect": {
+                "x": 281,
+                "y": 128.66666666666666,
+                "width": 48,
+                "height": 55.333333333333314
+              },
+              "visible": true,
+              "children": []
+            },
+            {
+              "type": "Button",
+              "identifier": null,
+              "label": "Sunday, June 7, 2026",
+              "value": null,
+              "name": "Sunday, June 7, 2026",
+              "rect": {
+                "x": 333,
+                "y": 128.66666666666666,
+                "width": 48,
+                "height": 55.333333333333314
+              },
+              "visible": true,
+              "children": []
+            },
+            {
+              "type": "Button",
+              "identifier": null,
+              "label": "Monday, June 8, 2026",
+              "value": null,
+              "name": "Monday, June 8, 2026",
+              "rect": {
+                "x": 385,
+                "y": 128.66666666666666,
+                "width": 48,
+                "height": 55.333333333333314
+              },
+              "visible": true,
+              "children": []
+            },
+            {
+              "type": "Button",
+              "identifier": null,
+              "label": "Tuesday, June 9, 2026",
+              "value": null,
+              "name": "Tuesday, June 9, 2026",
+              "rect": {
+                "x": 437,
+                "y": 128.66666666666666,
+                "width": 48,
+                "height": 55.333333333333314
+              },
+              "visible": true,
+              "children": []
+            },
+            {
+              "type": "Button",
+              "identifier": null,
+              "label": "Wednesday, June 10, 2026",
+              "value": null,
+              "name": "Wednesday, June 10, 2026",
+              "rect": {
+                "x": 489,
+                "y": 128.66666666666666,
+                "width": 48,
+                "height": 55.333333333333314
+              },
+              "visible": true,
+              "children": []
+            },
+            {
+              "type": "Button",
+              "identifier": null,
+              "label": "Thursday, June 11, 2026",
+              "value": null,
+              "name": "Thursday, June 11, 2026",
+              "rect": {
+                "x": 541,
+                "y": 128.66666666666666,
+                "width": 48,
+                "height": 55.333333333333314
+              },
+              "visible": true,
+              "children": []
+            },
+            {
+              "type": "Heading",
+              "identifier": "home-new-app-tour-banner-title",
+              "label": "We changed things up",
+              "value": null,
+              "name": "We changed things up",
+              "rect": {
+                "x": 40,
+                "y": 241.33333333333331,
+                "width": 173.66666666666666,
+                "height": 21
+              },
+              "visible": true,
+              "children": []
+            },
+            {
+              "type": "Button",
+              "identifier": "home-new-app-tour-banner-dismiss-button",
+              "label": "tintable.closeMini",
+              "value": null,
+              "name": "tintable.closeMini",
+              "rect": {
+                "x": 346,
+                "y": 229.33333333333331,
+                "width": 28,
+                "height": 28
+              },
+              "visible": true,
+              "children": []
+            },
+            {
+              "type": "StaticText",
+              "identifier": "home-new-app-tour-banner-body",
+              "label": "Fresh look, new vibe. Let's walk you through it.",
+              "value": null,
+              "name": "Fresh look, new vibe. Let's walk you through it.",
+              "rect": {
+                "x": 40,
+                "y": 270.3333333333333,
+                "width": 179,
+                "height": 31.333333333333314
+              },
+              "visible": true,
+              "children": []
+            },
+            {
+              "type": "StaticText",
+              "identifier": "home-new-app-tour-banner-cta-button",
+              "label": "Take the tour",
+              "value": null,
+              "name": "Take the tour",
+              "rect": {
+                "x": 40,
+                "y": 309.66666666666663,
+                "width": 86.66666666666666,
+                "height": 18.33333333333337
+              },
+              "visible": true,
+              "children": []
+            },
+            {
+              "type": "Image",
+              "identifier": "home-new-app-tour-banner-cta-button",
+              "label": "Forward",
+              "value": null,
+              "name": "Forward",
+              "rect": {
+                "x": 132.33333333333334,
+                "y": 313.66666666666663,
+                "width": 6,
+                "height": 10.666666984558105
+              },
+              "visible": true,
+              "children": []
+            },
+            {
+              "type": "Image",
+              "identifier": null,
+              "label": "new_app_tour_icon",
+              "value": null,
+              "name": "new_app_tour_icon",
+              "rect": {
+                "x": 279,
+                "y": 248.66666666666663,
+                "width": 71,
+                "height": 72
+              },
+              "visible": true,
+              "children": []
+            },
+            {
+              "type": "Heading",
+              "identifier": "home-new-for-you-header",
+              "label": "New for You",
+              "value": null,
+              "name": "New for You",
+              "rect": {
+                "x": 16,
+                "y": 359.97666666666663,
+                "width": 103.33333333333333,
+                "height": 23.666666666666686
+              },
+              "visible": true,
+              "children": []
+            },
+            {
+              "type": "Button",
+              "identifier": "home-new-for-you-card-1",
+              "label": "Workouts",
+              "value": null,
+              "name": "Workouts",
+              "rect": {
+                "x": 15.5,
+                "y": 395.1666564941406,
+                "width": 111,
+                "height": 96
+              },
+              "visible": true,
+              "children": []
+            },
+            {
+              "type": "Button",
+              "identifier": "home-new-for-you-card-2",
+              "label": "Personalize your program",
+              "value": null,
+              "name": "Personalize your program",
+              "rect": {
+                "x": 137.5,
+                "y": 395.1666564941406,
+                "width": 111,
+                "height": 96
+              },
+              "visible": true,
+              "children": []
+            },
+            {
+              "type": "Button",
+              "identifier": "home-new-for-you-card-3",
+              "label": "Schedule a workshop",
+              "value": null,
+              "name": "Schedule a workshop",
+              "rect": {
+                "x": 259.5,
+                "y": 395.1666564941406,
+                "width": 111,
+                "height": 96
+              },
+              "visible": true,
+              "children": []
+            },
+            {
+              "type": "Button",
+              "identifier": "home-new-for-you-card-4",
+              "label": "Connect your device",
+              "value": null,
+              "name": "Connect your device",
+              "rect": {
+                "x": 381.5,
+                "y": 395.1666564941406,
+                "width": 111,
+                "height": 96
+              },
+              "visible": true,
+              "children": []
+            },
+            {
+              "type": "StaticText",
+              "identifier": null,
+              "label": "Complete your body scan",
+              "value": null,
+              "name": "Complete your body scan",
+              "rect": {
+                "x": 516.1666666666666,
+                "y": 443.49999999999994,
+                "width": 85.66666666666663,
+                "height": 31.33333333333337
+              },
+              "visible": true,
+              "children": []
+            },
+            {
+              "type": "Button",
+              "identifier": "home-mode-indicator-button",
+              "label": "Lose",
+              "value": null,
+              "name": "Lose",
+              "rect": {
+                "x": 35.5,
+                "y": 526.1666870117188,
+                "width": 88.66666412353516,
+                "height": 33
+              },
+              "visible": true,
+              "children": []
+            },
+            {
+              "type": "StaticText",
+              "identifier": "home-points-tile-weekly-block",
+              "label": "28, Weeklies",
+              "value": null,
+              "name": "28, Weeklies",
+              "rect": {
+                "x": 45.66666793823242,
+                "y": 619.8099975585938,
+                "width": 52.66666793823242,
+                "height": 41.66668701171875
+              },
+              "visible": true,
+              "children": []
+            },
+            {
+              "type": "StaticText",
+              "identifier": "home-points-tile-remaining-block",
+              "label": "23, Points\u00ae Left",
+              "value": null,
+              "name": "23, Points\u00ae Left",
+              "rect": {
+                "x": 165,
+                "y": 599.3099975585938,
+                "width": 72,
+                "height": 74.66668701171875
+              },
+              "visible": true,
+              "children": []
+            },
+            {
+              "type": "StaticText",
+              "identifier": "home-points-tile-used-block",
+              "label": "0, Used",
+              "value": null,
+              "name": "0, Used",
+              "rect": {
+                "x": 315.3333435058594,
+                "y": 619.8099975585938,
+                "width": 29.333343505859375,
+                "height": 41.66668701171875
+              },
+              "visible": true,
+              "children": []
+            },
+            {
+              "type": "Button",
+              "identifier": "home-points-action-scanner-button",
+              "label": "Scanner",
+              "value": null,
+              "name": "Scanner",
+              "rect": {
+                "x": 35.5,
+                "y": 730.1666870117188,
+                "width": 100.33334350585938,
+                "height": 70.6666259765625
+              },
+              "visible": true,
+              "children": []
+            },
+            {
+              "type": "Button",
+              "identifier": "home-points-action-track-meal-button",
+              "label": "Track a meal",
+              "value": null,
+              "name": "Track a meal",
+              "rect": {
+                "x": 150.8333282470703,
+                "y": 730.1666870117188,
+                "width": 100.33334350585938,
+                "height": 70.6666259765625
+              },
+              "visible": true,
+              "children": []
+            },
+            {
+              "type": "Button",
+              "identifier": "home-points-action-food-log-button",
+              "label": "Food log",
+              "value": null,
+              "name": "Food log",
+              "rect": {
+                "x": 266.1666564941406,
+                "y": 730.1666870117188,
+                "width": 100.33334350585938,
+                "height": 70.6666259765625
+              },
+              "visible": true,
+              "children": []
+            },
+            {
+              "type": "Heading",
+              "identifier": "home-daily-summary-header",
+              "label": "Daily Summary",
+              "value": null,
+              "name": "Daily Summary",
+              "rect": {
+                "x": 16,
+                "y": 932.31,
+                "width": 117.33333333333331,
+                "height": 21
+              },
+              "visible": true,
+              "children": []
+            },
+            {
+              "type": "Button",
+              "identifier": null,
+              "label": "Macros and Nutrients",
+              "value": null,
+              "name": "Macros and Nutrients",
+              "rect": {
+                "x": 346,
+                "y": 981,
+                "width": 24,
+                "height": 24
+              },
+              "visible": true,
+              "children": []
+            },
+            {
+              "type": "Heading",
+              "identifier": null,
+              "label": "MACROS AND NUTRIENTS",
+              "value": null,
+              "name": "MACROS AND NUTRIENTS",
+              "rect": {
+                "x": 32,
+                "y": 989,
+                "width": 306,
+                "height": 15.666666666666629
+              },
+              "visible": true,
+              "children": []
+            },
+            {
+              "type": "Group",
+              "identifier": null,
+              "label": null,
+              "value": null,
+              "name": null,
+              "rect": {
+                "x": 32,
+                "y": 1016.6666666666665,
+                "width": 338,
+                "height": 272
+              },
+              "visible": true,
+              "children": []
+            },
+            {
+              "type": "Button",
+              "identifier": null,
+              "label": "Protein, 0 grams, 65 to 104 grams",
+              "value": null,
+              "name": "Protein, 0 grams, 65 to 104 grams",
+              "rect": {
+                "x": 32,
+                "y": 1016.6666666666665,
+                "width": 107,
+                "height": 128
+              },
+              "visible": true,
+              "children": []
+            },
+            {
+              "type": "Button",
+              "identifier": null,
+              "label": "Fiber, 0 grams, At least 25 grams",
+              "value": null,
+              "name": "Fiber, 0 grams, At least 25 grams",
+              "rect": {
+                "x": 147.66666666666669,
+                "y": 1016.6666666666665,
+                "width": 107,
+                "height": 128
+              },
+              "visible": true,
+              "children": []
+            },
+            {
+              "type": "Button",
+              "identifier": null,
+              "label": "Sat. Fat, 0 grams, Under 13 grams",
+              "value": null,
+              "name": "Sat. Fat, 0 grams, Under 13 grams",
+              "rect": {
+                "x": 263,
+                "y": 1016.6666666666665,
+                "width": 107,
+                "height": 128
+              },
+              "visible": true,
+              "children": []
+            },
+            {
+              "type": "Button",
+              "identifier": null,
+              "label": "ADDED SUGAR, 0 grams, Under 30 grams",
+              "value": null,
+              "name": "ADDED SUGAR, 0 grams, Under 30 grams",
+              "rect": {
+                "x": 32,
+                "y": 1152.6666666666665,
+                "width": 107,
+                "height": 128
+              },
+              "visible": true,
+              "children": []
+            },
+            {
+              "type": "Button",
+              "identifier": null,
+              "label": "Customize nutrient information",
+              "value": null,
+              "name": "Customize nutrient information",
+              "rect": {
+                "x": 147.66666666666669,
+                "y": 1152.6666666666665,
+                "width": 107,
+                "height": 128
+              },
+              "visible": true,
+              "children": []
+            },
+            {
+              "type": "Group",
+              "identifier": null,
+              "label": null,
+              "value": null,
+              "name": null,
+              "rect": {
+                "x": 0,
+                "y": 0,
+                "width": 0,
+                "height": 0
+              },
+              "visible": true,
+              "children": []
+            },
+            {
+              "type": "Button",
+              "identifier": "home-behavioral-weight-value-home-behavioral-weight-obscure-toggle-home-behavioral-weight-start-label-home-behavioral-weight-goal-label",
+              "label": "WEIGHT, -, Start:, 143 lbs, Goal:, 124 lbs",
+              "value": null,
+              "name": "WEIGHT, -, Start:, 143 lbs, Goal:, 124 lbs",
+              "rect": {
+                "x": 16,
+                "y": 1320.6666259765625,
+                "width": 324,
+                "height": 195.3333740234375
+              },
+              "visible": true,
+              "children": []
+            },
+            {
+              "type": "Button",
+              "identifier": "home-behavioral-activity-loading-state",
+              "label": "ACTIVITY",
+              "value": "1",
+              "name": "ACTIVITY",
+              "rect": {
+                "x": 356,
+                "y": 1320.6666666666665,
+                "width": 324,
+                "height": 195.33333333333326
+              },
+              "visible": true,
+              "children": []
+            },
+            {
+              "type": "Button",
+              "identifier": "home-behavioral-hydration-value-home-behavioral-hydration-daily-goal-label-home-behavioral-hydration-score-ring-home-behavioral-hydration-weekly-goal-title-home-behavioral-hydration-weekly-goal-value",
+              "label": "HYDRATION, 0 fl oz, of 64 fl oz goal, 0%, Weekly goal, 448 fl oz",
+              "value": null,
+              "name": "HYDRATION, 0 fl oz, of 64 fl oz goal, 0%, Weekly goal, 448 fl oz",
+              "rect": {
+                "x": 696,
+                "y": 1320.6666259765625,
+                "width": 324,
+                "height": 195.3333740234375
+              },
+              "visible": true,
+              "children": []
+            },
+            {
+              "type": "Button",
+              "identifier": "home-behavioral-sleep-empty-state",
+              "label": "SLEEP, No sleep tracked today.",
+              "value": null,
+              "name": "SLEEP, No sleep tracked today.",
+              "rect": {
+                "x": 1036,
+                "y": 1320.6666666666665,
+                "width": 324,
+                "height": 195.33333333333326
+              },
+              "visible": true,
+              "children": []
+            },
+            {
+              "type": "Group",
+              "identifier": null,
+              "label": "Tab Bar",
+              "value": null,
+              "name": "Tab Bar",
+              "rect": {
+                "x": 0,
+                "y": 763,
+                "width": 402,
+                "height": 111
+              },
+              "visible": true,
+              "children": []
+            }
+          ]
+        },
+        "app_commit": null
+      },
+      "notes": {
+        "summary": "Home"
+      },
+      "provenance": {
+        "learned": null,
+        "last_confirmed": null,
+        "last_modified": null
+      }
+    },
+    "st_0002": {
+      "state_id": "st_0002",
+      "schema_version": 1,
+      "reference": {
+        "tree": {
+          "type": "Application",
+          "identifier": null,
+          "label": null,
+          "value": null,
+          "visible": true,
+          "children": [
+            {
+              "type": "Application",
+              "identifier": null,
+              "label": "WeightWatchers",
+              "value": null,
+              "name": "WeightWatchers",
+              "rect": {
+                "x": 0,
+                "y": 0,
+                "width": 402,
+                "height": 874
+              },
+              "visible": true,
+              "children": []
+            },
+            {
+              "type": "Button",
+              "identifier": "settings-back-button",
+              "label": "Back",
+              "value": null,
+              "name": "Back",
+              "rect": {
+                "x": 16,
+                "y": 62,
+                "width": 32,
+                "height": 32
+              },
+              "visible": true,
+              "children": []
+            },
+            {
+              "type": "StaticText",
+              "identifier": null,
+              "label": "My tools",
+              "value": null,
+              "name": "My tools",
+              "rect": {
+                "x": 16,
+                "y": 118,
+                "width": 74.66666666666666,
+                "height": 23.666666666666657
+              },
+              "visible": true,
+              "children": []
+            },
+            {
+              "type": "Button",
+              "identifier": "settings-my-food-row",
+              "label": "My food",
+              "value": null,
+              "name": "My food",
+              "rect": {
+                "x": 16,
+                "y": 161.66666666666666,
+                "width": 370,
+                "height": 56
+              },
+              "visible": true,
+              "children": []
+            },
+            {
+              "type": "Button",
+              "identifier": "settings-recipes-row",
+              "label": "Recipes",
+              "value": null,
+              "name": "Recipes",
+              "rect": {
+                "x": 16,
+                "y": 217.66666666666666,
+                "width": 370,
+                "height": 55.99999999999997
+              },
+              "visible": true,
+              "children": []
+            },
+            {
+              "type": "Button",
+              "identifier": "settings-weekly-plan-row",
+              "label": "Weekly plan",
+              "value": null,
+              "name": "Weekly plan",
+              "rect": {
+                "x": 16,
+                "y": 273.66666666666663,
+                "width": 370,
+                "height": 56
+              },
+              "visible": true,
+              "children": []
+            },
+            {
+              "type": "Button",
+              "identifier": "settings-zero-point-foods-row",
+              "label": "ZeroPoint\u00ae foods",
+              "value": null,
+              "name": "ZeroPoint\u00ae foods",
+              "rect": {
+                "x": 16,
+                "y": 329.66666666666663,
+                "width": 370,
+                "height": 56
+              },
+              "visible": true,
+              "children": []
+            },
+            {
+              "type": "Button",
+              "identifier": "settings-saved-row",
+              "label": "Saved",
+              "value": null,
+              "name": "Saved",
+              "rect": {
+                "x": 16,
+                "y": 385.66666666666663,
+                "width": 370,
+                "height": 56
+              },
+              "visible": true,
+              "children": []
+            },
+            {
+              "type": "Button",
+              "identifier": "settings-monthly-pass-row",
+              "label": "Monthly pass",
+              "value": null,
+              "name": "Monthly pass",
+              "rect": {
+                "x": 16,
+                "y": 441.66666666666663,
+                "width": 370,
+                "height": 56
+              },
+              "visible": true,
+              "children": []
+            },
+            {
+              "type": "Button",
+              "identifier": "settings-body-scanner-row",
+              "label": "Body scanner",
+              "value": null,
+              "name": "Body scanner",
+              "rect": {
+                "x": 16,
+                "y": 497.66666666666663,
+                "width": 370,
+                "height": 56
+              },
+              "visible": true,
+              "children": []
+            },
+            {
+              "type": "Button",
+              "identifier": "settings-audio-coaching-row",
+              "label": "Audio coaching",
+              "value": null,
+              "name": "Audio coaching",
+              "rect": {
+                "x": 16,
+                "y": 553.6666666666666,
+                "width": 370,
+                "height": 56
+              },
+              "visible": true,
+              "children": []
+            },
+            {
+              "type": "StaticText",
+              "identifier": null,
+              "label": "Program setup",
+              "value": null,
+              "name": "Program setup",
+              "rect": {
+                "x": 16,
+                "y": 641.6666666666667,
+                "width": 127.33333333333331,
+                "height": 23.66666666666663
+              },
+              "visible": true,
+              "children": []
+            },
+            {
+              "type": "Button",
+              "identifier": "settings-goal-settings-row",
+              "label": "My goal settings",
+              "value": null,
+              "name": "My goal settings",
+              "rect": {
+                "x": 16,
+                "y": 685.3333333333333,
+                "width": 370,
+                "height": 56
+              },
+              "visible": true,
+              "children": []
+            },
+            {
+              "type": "Button",
+              "identifier": "settings-modes-row",
+              "label": "Modes",
+              "value": null,
+              "name": "Modes",
+              "rect": {
+                "x": 16,
+                "y": 741.3333333333333,
+                "width": 370,
+                "height": 56
+              },
+              "visible": true,
+              "children": []
+            },
+            {
+              "type": "Button",
+              "identifier": "settings-health-support-row",
+              "label": "Health support",
+              "value": null,
+              "name": "Health support",
+              "rect": {
+                "x": 16,
+                "y": 797.3333333333333,
+                "width": 370,
+                "height": 56
+              },
+              "visible": true,
+              "children": []
+            },
+            {
+              "type": "Button",
+              "identifier": "settings-glp1-success-row",
+              "label": "GLP-1 Success",
+              "value": null,
+              "name": "GLP-1 Success",
+              "rect": {
+                "x": 16,
+                "y": 853.3333333333333,
+                "width": 370,
+                "height": 56
+              },
+              "visible": true,
+              "children": []
+            },
+            {
+              "type": "Button",
+              "identifier": "settings-connected-devices-row",
+              "label": "Connected devices",
+              "value": null,
+              "name": "Connected devices",
+              "rect": {
+                "x": 16,
+                "y": 909.3333333333333,
+                "width": 370,
+                "height": 56
+              },
+              "visible": true,
+              "children": []
+            },
+            {
+              "type": "StaticText",
+              "identifier": null,
+              "label": "Community",
+              "value": null,
+              "name": "Community",
+              "rect": {
+                "x": 16,
+                "y": 997.3333333333335,
+                "width": 98.66666666666666,
+                "height": 23.66666666666663
+              },
+              "visible": true,
+              "children": []
+            },
+            {
+              "type": "Button",
+              "identifier": "settings-connect-row",
+              "label": "Connect",
+              "value": null,
+              "name": "Connect",
+              "rect": {
+                "x": 16,
+                "y": 1041,
+                "width": 370,
+                "height": 56
+              },
+              "visible": true,
+              "children": []
+            },
+            {
+              "type": "Button",
+              "identifier": "settings-invite-friend-row",
+              "label": "Invite a friend",
+              "value": null,
+              "name": "Invite a friend",
+              "rect": {
+                "x": 16,
+                "y": 1097,
+                "width": 370,
+                "height": 56
+              },
+              "visible": true,
+              "children": []
+            },
+            {
+              "type": "Button",
+              "identifier": "settings-find-a-workshop-row",
+              "label": "Find a Workshop",
+              "value": null,
+              "name": "Find a Workshop",
+              "rect": {
+                "x": 16,
+                "y": 1153,
+                "width": 370,
+                "height": 56
+              },
+              "visible": true,
+              "children": []
+            },
+            {
+              "type": "StaticText",
+              "identifier": null,
+              "label": "Account & app",
+              "value": null,
+              "name": "Account & app",
+              "rect": {
+                "x": 16,
+                "y": 1241.0000000000002,
+                "width": 125.66666666666666,
+                "height": 23.666666666666742
+              },
+              "visible": true,
+              "children": []
+            },
+            {
+              "type": "Button",
+              "identifier": "settings-account-and-subscription-row",
+              "label": "Account & subscription",
+              "value": null,
+              "name": "Account & subscription",
+              "rect": {
+                "x": 16,
+                "y": 1284.6666666666665,
+                "width": 370,
+                "height": 56
+              },
+              "visible": true,
+              "children": []
+            },
+            {
+              "type": "Button",
+              "identifier": "settings-app-settings-row",
+              "label": "App settings",
+              "value": null,
+              "name": "App settings",
+              "rect": {
+                "x": 16,
+                "y": 1340.6666666666665,
+                "width": 370,
+                "height": 56
+              },
+              "visible": true,
+              "children": []
+            },
+            {
+              "type": "Button",
+              "identifier": "settings-support-row",
+              "label": "Support",
+              "value": null,
+              "name": "Support",
+              "rect": {
+                "x": 16,
+                "y": 1396.6666666666665,
+                "width": 370,
+                "height": 56
+              },
+              "visible": true,
+              "children": []
+            },
+            {
+              "type": "Button",
+              "identifier": "settings-sign-out-row",
+              "label": "Sign out",
+              "value": null,
+              "name": "Sign out",
+              "rect": {
+                "x": 16,
+                "y": 1492.6666666666665,
+                "width": 370,
+                "height": 53
+              },
+              "visible": true,
+              "children": []
+            }
+          ]
+        },
+        "app_commit": null
+      },
+      "notes": {
+        "summary": "Menu"
+      },
+      "provenance": {
+        "learned": null,
+        "last_confirmed": null,
+        "last_modified": null
+      }
+    },
+    "st_0003": {
+      "state_id": "st_0003",
+      "schema_version": 1,
+      "reference": {
+        "tree": {
+          "type": "Application",
+          "identifier": null,
+          "label": null,
+          "value": null,
+          "visible": true,
+          "children": [
+            {
+              "type": "Application",
+              "identifier": null,
+              "label": "WeightWatchers",
+              "value": null,
+              "name": "WeightWatchers",
+              "rect": {
+                "x": 0,
+                "y": 0,
+                "width": 402,
+                "height": 874
+              },
+              "visible": true,
+              "children": []
+            },
+            {
+              "type": "Button",
+              "identifier": "settings-back-button",
+              "label": "Back",
+              "value": null,
+              "name": "Back",
+              "rect": {
+                "x": 16,
+                "y": 62,
+                "width": 32,
+                "height": 32
+              },
+              "visible": true,
+              "children": []
+            },
+            {
+              "type": "StaticText",
+              "identifier": null,
+              "label": "Personalize your program",
+              "value": null,
+              "name": "Personalize your program",
+              "rect": {
+                "x": 103.33333333333334,
+                "y": 67.5,
+                "width": 195.3333333333333,
+                "height": 21
+              },
+              "visible": true,
+              "children": []
+            },
+            {
+              "type": "Button",
+              "identifier": "settings-close-button",
+              "label": "Close",
+              "value": null,
+              "name": "Close",
+              "rect": {
+                "x": 358,
+                "y": 66,
+                "width": 24,
+                "height": 24
+              },
+              "visible": true,
+              "children": []
+            },
+            {
+              "type": "StaticText",
+              "identifier": null,
+              "label": "Choose a Mode",
+              "value": null,
+              "name": "Choose a Mode",
+              "rect": {
+                "x": 16,
+                "y": 126,
+                "width": 240,
+                "height": 41.66666666666666
+              },
+              "visible": true,
+              "children": []
+            },
+            {
+              "type": "StaticText",
+              "identifier": null,
+              "label": "Change your mode at any time for a pace and focus that feels right.",
+              "value": null,
+              "name": "Change your mode at any time for a pace and focus that feels right.",
+              "rect": {
+                "x": 16,
+                "y": 179.66666666666666,
+                "width": 336.3333333333333,
+                "height": 41.66666666666666
+              },
+              "visible": true,
+              "children": []
+            },
+            {
+              "type": "Image",
+              "identifier": null,
+              "label": "tintable.vacation",
+              "value": null,
+              "name": "tintable.vacation",
+              "rect": {
+                "x": 40,
+                "y": 269.3333333333333,
+                "width": 32,
+                "height": 32
+              },
+              "visible": true,
+              "children": []
+            },
+            {
+              "type": "StaticText",
+              "identifier": null,
+              "label": "Vacation",
+              "value": null,
+              "name": "Vacation",
+              "rect": {
+                "x": 84,
+                "y": 269.66666666666663,
+                "width": 101,
+                "height": 31.33333333333337
+              },
+              "visible": true,
+              "children": []
+            },
+            {
+              "type": "StaticText",
+              "identifier": null,
+              "label": "Beta",
+              "value": null,
+              "name": "Beta",
+              "rect": {
+                "x": 209,
+                "y": 276.16666666666663,
+                "width": 31,
+                "height": 18.33333333333337
+              },
+              "visible": true,
+              "children": []
+            },
+            {
+              "type": "CheckBox",
+              "identifier": null,
+              "label": "",
+              "value": "0",
+              "name": "",
+              "rect": {
+                "x": 310,
+                "y": 269.3333435058594,
+                "width": 52,
+                "height": 32
+              },
+              "visible": true,
+              "children": []
+            },
+            {
+              "type": "StaticText",
+              "identifier": null,
+              "label": "Going away for a week or two or just need a break to focus on family, work, whatever?\u00a0\u00a0Info",
+              "value": null,
+              "name": "Going away for a week or two or just need a break to focus on family, work, whatever?\u00a0\u00a0Info",
+              "rect": {
+                "x": 40,
+                "y": 333.66666666666663,
+                "width": 322,
+                "height": 62.666666666666686
+              },
+              "visible": true,
+              "children": []
+            },
+            {
+              "type": "Image",
+              "identifier": null,
+              "label": "tintable.star",
+              "value": null,
+              "name": "tintable.star",
+              "rect": {
+                "x": 40,
+                "y": 415.3333333333333,
+                "width": 20,
+                "height": 20
+              },
+              "visible": true,
+              "children": []
+            },
+            {
+              "type": "StaticText",
+              "identifier": null,
+              "label": "Best if you want a temporary pause from tracking",
+              "value": null,
+              "name": "Best if you want a temporary pause from tracking",
+              "rect": {
+                "x": 68,
+                "y": 404.3333333333333,
+                "width": 262.66666666666663,
+                "height": 41.666666666666686
+              },
+              "visible": true,
+              "children": []
+            },
+            {
+              "type": "Image",
+              "identifier": null,
+              "label": "tintable.check",
+              "value": null,
+              "name": "tintable.check",
+              "rect": {
+                "x": 40,
+                "y": 465,
+                "width": 20,
+                "height": 20
+              },
+              "visible": true,
+              "children": []
+            },
+            {
+              "type": "StaticText",
+              "identifier": null,
+              "label": "Freeze your streaks and Weight Health Score until you\u2019re back",
+              "value": null,
+              "name": "Freeze your streaks and Weight Health Score until you\u2019re back",
+              "rect": {
+                "x": 68,
+                "y": 454,
+                "width": 286,
+                "height": 41.666666666666686
+              },
+              "visible": true,
+              "children": []
+            },
+            {
+              "type": "Image",
+              "identifier": null,
+              "label": "tintable.check",
+              "value": null,
+              "name": "tintable.check",
+              "rect": {
+                "x": 40,
+                "y": 514.6666666666666,
+                "width": 20,
+                "height": 20
+              },
+              "visible": true,
+              "children": []
+            },
+            {
+              "type": "StaticText",
+              "identifier": null,
+              "label": "Option to commit to one daily habit to help keep your momentum.",
+              "value": null,
+              "name": "Option to commit to one daily habit to help keep your momentum.",
+              "rect": {
+                "x": 68,
+                "y": 503.6666666666667,
+                "width": 279.3333333333333,
+                "height": 41.666666666666686
+              },
+              "visible": true,
+              "children": []
+            },
+            {
+              "type": "Image",
+              "identifier": null,
+              "label": "tintable.dumbbellThin",
+              "value": null,
+              "name": "tintable.dumbbellThin",
+              "rect": {
+                "x": 40,
+                "y": 609.3333333333333,
+                "width": 32,
+                "height": 32
+              },
+              "visible": true,
+              "children": []
+            },
+            {
+              "type": "StaticText",
+              "identifier": null,
+              "label": "All-in",
+              "value": null,
+              "name": "All-in",
+              "rect": {
+                "x": 84,
+                "y": 609.6666666666666,
+                "width": 61.66666666666666,
+                "height": 31.33333333333337
+              },
+              "visible": true,
+              "children": []
+            },
+            {
+              "type": "CheckBox",
+              "identifier": null,
+              "label": "",
+              "value": "0",
+              "name": "",
+              "rect": {
+                "x": 310,
+                "y": 609.3333129882812,
+                "width": 52,
+                "height": 32
+              },
+              "visible": true,
+              "children": []
+            },
+            {
+              "type": "StaticText",
+              "identifier": null,
+              "label": "A focused approach for times when you want to lock in and get results faster.",
+              "value": null,
+              "name": "A focused approach for times when you want to lock in and get results faster.",
+              "rect": {
+                "x": 40,
+                "y": 673.6666666666666,
+                "width": 307,
+                "height": 41.66666666666663
+              },
+              "visible": true,
+              "children": []
+            },
+            {
+              "type": "Image",
+              "identifier": null,
+              "label": "tintable.star",
+              "value": null,
+              "name": "tintable.star",
+              "rect": {
+                "x": 40,
+                "y": 744.6666666666666,
+                "width": 20,
+                "height": 20
+              },
+              "visible": true,
+              "children": []
+            },
+            {
+              "type": "StaticText",
+              "identifier": null,
+              "label": "Best if you are ready for a challenge or want a more intense jumpstart to your program",
+              "value": null,
+              "name": "Best if you are ready for a challenge or want a more intense jumpstart to your program",
+              "rect": {
+                "x": 68,
+                "y": 723.3333333333333,
+                "width": 285.66666666666663,
+                "height": 62.66666666666663
+              },
+              "visible": true,
+              "children": []
+            },
+            {
+              "type": "Image",
+              "identifier": null,
+              "label": "tintable.check",
+              "value": null,
+              "name": "tintable.check",
+              "rect": {
+                "x": 40,
+                "y": 805,
+                "width": 20,
+                "height": 20
+              },
+              "visible": true,
+              "children": []
+            },
+            {
+              "type": "StaticText",
+              "identifier": null,
+              "label": "Protein, fiber, hydration, and activity targets, plus a daily Points Budget",
+              "value": null,
+              "name": "Protein, fiber, hydration, and activity targets, plus a daily Points Budget",
+              "rect": {
+                "x": 68,
+                "y": 793.9999999999999,
+                "width": 263.3333333333333,
+                "height": 41.66666666666663
+              },
+              "visible": true,
+              "children": []
+            },
+            {
+              "type": "Image",
+              "identifier": null,
+              "label": "tintable.check",
+              "value": null,
+              "name": "tintable.check",
+              "rect": {
+                "x": 40,
+                "y": 844,
+                "width": 20,
+                "height": 20
+              },
+              "visible": true,
+              "children": []
+            },
+            {
+              "type": "StaticText",
+              "identifier": null,
+              "label": "Exclusive Weight Health Score",
+              "value": null,
+              "name": "Exclusive Weight Health Score",
+              "rect": {
+                "x": 68,
+                "y": 843.6666666666665,
+                "width": 222,
+                "height": 21
+              },
+              "visible": true,
+              "children": []
+            },
+            {
+              "type": "Button",
+              "identifier": null,
+              "label": "tintable.info",
+              "value": null,
+              "name": "tintable.info",
+              "rect": {
+                "x": 298,
+                "y": 844,
+                "width": 20,
+                "height": 20
+              },
+              "visible": true,
+              "children": []
+            },
+            {
+              "type": "Image",
+              "identifier": null,
+              "label": "tintable.targetThin",
+              "value": null,
+              "name": "tintable.targetThin",
+              "rect": {
+                "x": 40,
+                "y": 928.6666666666666,
+                "width": 32,
+                "height": 32
+              },
+              "visible": true,
+              "children": []
+            },
+            {
+              "type": "StaticText",
+              "identifier": null,
+              "label": "Lose",
+              "value": null,
+              "name": "Lose",
+              "rect": {
+                "x": 84,
+                "y": 929,
+                "width": 55,
+                "height": 31.33333333333337
+              },
+              "visible": true,
+              "children": []
+            },
+            {
+              "type": "CheckBox",
+              "identifier": null,
+              "label": "",
+              "value": "1",
+              "name": "",
+              "rect": {
+                "x": 310,
+                "y": 928.6666870117188,
+                "width": 52,
+                "height": 32
+              },
+              "visible": true,
+              "children": []
+            },
+            {
+              "type": "StaticText",
+              "identifier": null,
+              "label": "This is the default mode for Weight Watchers. To toggle off this mode, select a new one that fits your pace.",
+              "value": null,
+              "name": "This is the default mode for Weight Watchers. To toggle off this mode, select a new one that fits your pace.",
+              "rect": {
+                "x": 40,
+                "y": 993,
+                "width": 315,
+                "height": 62.666666666666515
+              },
+              "visible": true,
+              "children": []
+            },
+            {
+              "type": "Image",
+              "identifier": null,
+              "label": "tintable.infinityThin",
+              "value": null,
+              "name": "tintable.infinityThin",
+              "rect": {
+                "x": 40,
+                "y": 1119.6666666666665,
+                "width": 32,
+                "height": 32
+              },
+              "visible": true,
+              "children": []
+            },
+            {
+              "type": "StaticText",
+              "identifier": null,
+              "label": "Maintain",
+              "value": null,
+              "name": "Maintain",
+              "rect": {
+                "x": 84,
+                "y": 1120,
+                "width": 100.33333333333331,
+                "height": 31.333333333333258
+              },
+              "visible": true,
+              "children": []
+            },
+            {
+              "type": "CheckBox",
+              "identifier": null,
+              "label": "",
+              "value": "0",
+              "name": "",
+              "rect": {
+                "x": 310,
+                "y": 1119.6666259765625,
+                "width": 52,
+                "height": 32
+              },
+              "visible": true,
+              "children": []
+            },
+            {
+              "type": "StaticText",
+              "identifier": null,
+              "label": "The plan for life after weight loss, designed to help you stay consistent.",
+              "value": null,
+              "name": "The plan for life after weight loss, designed to help you stay consistent.",
+              "rect": {
+                "x": 40,
+                "y": 1183.9999999999998,
+                "width": 285,
+                "height": 41.66666666666674
+              },
+              "visible": true,
+              "children": []
+            },
+            {
+              "type": "Image",
+              "identifier": null,
+              "label": "tintable.star",
+              "value": null,
+              "name": "tintable.star",
+              "rect": {
+                "x": 40,
+                "y": 1244.3333333333333,
+                "width": 20,
+                "height": 20
+              },
+              "visible": true,
+              "children": []
+            },
+            {
+              "type": "StaticText",
+              "identifier": null,
+              "label": "Best if you\u2019re happy where you are and want to stay there",
+              "value": null,
+              "name": "Best if you\u2019re happy where you are and want to stay there",
+              "rect": {
+                "x": 68,
+                "y": 1233.6666666666665,
+                "width": 286.66666666666663,
+                "height": 41.66666666666674
+              },
+              "visible": true,
+              "children": []
+            },
+            {
+              "type": "Image",
+              "identifier": null,
+              "label": "tintable.check",
+              "value": null,
+              "name": "tintable.check",
+              "rect": {
+                "x": 40,
+                "y": 1284,
+                "width": 20,
+                "height": 20
+              },
+              "visible": true,
+              "children": []
+            },
+            {
+              "type": "StaticText",
+              "identifier": null,
+              "label": "Adjustable daily Points Budget",
+              "value": null,
+              "name": "Adjustable daily Points Budget",
+              "rect": {
+                "x": 68,
+                "y": 1283.3333333333333,
+                "width": 223.33333333333331,
+                "height": 21
+              },
+              "visible": true,
+              "children": []
+            },
+            {
+              "type": "Image",
+              "identifier": null,
+              "label": "tintable.check",
+              "value": null,
+              "name": "tintable.check",
+              "rect": {
+                "x": 40,
+                "y": 1323.3333333333333,
+                "width": 20,
+                "height": 20
+              },
+              "visible": true,
+              "children": []
+            },
+            {
+              "type": "StaticText",
+              "identifier": null,
+              "label": "Ability to grow weekly Budget with activity and rollover Points",
+              "value": null,
+              "name": "Ability to grow weekly Budget with activity and rollover Points",
+              "rect": {
+                "x": 68,
+                "y": 1312.3333333333333,
+                "width": 258,
+                "height": 41.66666666666674
+              },
+              "visible": true,
+              "children": []
+            },
+            {
+              "type": "StaticText",
+              "identifier": null,
+              "label": "Did you know?",
+              "value": null,
+              "name": "Did you know?",
+              "rect": {
+                "x": 32,
+                "y": 1417.9999999999998,
+                "width": 109.66666666666666,
+                "height": 21
+              },
+              "visible": true,
+              "children": []
+            },
+            {
+              "type": "StaticText",
+              "identifier": null,
+              "label": "You cannot enable All-in Mode if you have selected \u201cTaking a GLP-1\u201d or \u201cDiabetes\u201d in Settings. Go to Program Settings and turn off to enable this mode.",
+              "value": null,
+              "name": "You cannot enable All-in Mode if you have selected \u201cTaking a GLP-1\u201d or \u201cDiabetes\u201d in Settings. Go to Program Settings and turn off to enable this mode.",
+              "rect": {
+                "x": 32,
+                "y": 1446.9999999999998,
+                "width": 331.66666666666663,
+                "height": 83.33333333333326
+              },
+              "visible": true,
+              "children": []
+            }
+          ]
+        },
+        "app_commit": null
+      },
+      "notes": {
+        "summary": "Modes"
+      },
+      "provenance": {
+        "learned": null,
+        "last_confirmed": null,
+        "last_modified": null
+      }
+    }
+  },
+  "transitions": [
+    {
+      "from": "st_0001",
+      "to": "st_0002",
+      "action": {
+        "label": "open menu",
+        "gesture": "tap",
+        "selector": {
+          "identifier": "hamburger-menu-button"
+        },
+        "target": {
+          "at": [
+            32,
+            78
+          ]
+        }
+      },
+      "wait": null,
+      "kind": "navigation",
+      "reliability": {
+        "confirmations": 1,
+        "failures": 0
+      }
+    },
+    {
+      "from": "st_0002",
+      "to": "st_0003",
+      "action": {
+        "label": "open modes",
+        "gesture": "tap",
+        "selector": {
+          "identifier": "settings-modes-row"
+        },
+        "target": {
+          "at": [
+            201,
+            769.3333333333333
+          ]
+        }
+      },
+      "wait": null,
+      "kind": "navigation",
+      "reliability": {
+        "confirmations": 1,
+        "failures": 0
+      }
+    }
+  ]
+}
